@@ -3,6 +3,26 @@ import os
 import shutil
 
 
+import sys
+
+# get access to db-functions from the dbsetup file
+from dbsetup import init_db, db_add_user, db_get_user
+# init_db() # to init the db
+
+
+def db_functions(username, password):
+
+    db_add_user(username, password_hash)
+    if user and user[2] == password:  # Placeholder for proper password check
+        print("Login successful.")
+    else:
+        print("Login failed.")
+    
+    gottenuser = db_get_user(username)
+
+
+
+
 class User:
     # user is saved to database
     def __init__(self, name):
