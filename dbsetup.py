@@ -47,6 +47,20 @@ def init_db():
         '''
     )
 
+    # directory table
+    cursor.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS directories (
+            dir_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dir_name TEXT NOT NULL,
+            parent_dir_id INTEGER,
+            owner_id INTEGER NOT NULL,
+            FOREIGN KEY (parent_dir_id) REFERENCES directories (dir_id),
+            FOREIGN KEY (owner_id) REFERENCES users (user_id)
+        )
+        '''
+    )
+
     # files table
     cursor.execute(
         '''
@@ -54,17 +68,71 @@ def init_db():
             file_id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             owner_id INTEGER NOT NULL,
-            group_id INTEGER,
+            dir_id INTEGER NOT NULL,
             permissions TEXT NOT NULL,
             content BLOB,
             FOREIGN KEY (owner_id) REFERENCES users (user_id),
-            FOREIGN KEY (group_id) REFERENCES groups (group_id)
+            FOREIGN KEY (dir_id) REFERENCES directories (dir_id)
         )
         '''
     )
 
-    # directory table
+    
+    ######### UNTESTED ###########################################
 
+    # abstract permission type table
+    cursor.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS permissions (
+            permission_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL
+        );
+        '''
+    )
+    # predefine permissions
+    permissions = ['create', 'delete', 'read', 'write', 'rename']
+    for permission in permissions:
+        cursor.execute(
+            '''
+            INSERT OR IGNORE INTO permissions (name) 
+            VALUES (?)
+            ''', 
+            (permission,)
+        )
+
+
+    # file permissions table
+    cursor.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS user_file_permissions (
+            user_id INTEGER,
+            file_id INTEGER,
+            permission_id INTEGER,
+            FOREIGN KEY (user_id) REFERENCES users (user_id),
+            FOREIGN KEY (file_id) REFERENCES files (file_id),
+            FOREIGN KEY (permission_id) REFERENCES permissions (permission_id),
+            PRIMARY KEY (user_id, file_id, permission_id)
+        );
+        '''
+    )
+
+
+    # directory permissions table
+    cursor.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS user_directory_permissions (
+            user_id INTEGER,
+            dir_id INTEGER,
+            permission_id INTEGER,
+            FOREIGN KEY (user_id) REFERENCES users (user_id),
+            FOREIGN KEY (dir_id) REFERENCES directories (dir_id),
+            FOREIGN KEY (permission_id) REFERENCES permissions (permission_id),
+            PRIMARY KEY (user_id, dir_id, permission_id)
+        );
+        '''
+    )
+
+    ##############################################################
 
     # ---------------------------------------------
     # NOTE:
@@ -267,6 +335,22 @@ def db_get_session_user_id(token):
         return session[0]
     else:
         return None
+
+
+
+def create_directory(dir_name):
+    print("create dir here")
+
+
+def create_file(file_name):
+    print("create file here")
+
+
+
+
+
+
+
 
 
 # testing
