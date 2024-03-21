@@ -5,14 +5,19 @@ import sys
 # get access to db-functions from the dbsetup file
 from dbsetup import init_db, db_add_user, db_get_user
 
+class Client:
+    # user is saved to database
+    def __init__(self, isLoggedIn):
+        self.isLoggedIn = isLoggedIn
+
+    def set_isLoggedIn(self, val):
+        self.isLoggedIn = val
 
 class User:
     # user is saved to database
     def __init__(self, name):
         self.name = name
         self.home_dir = create_dir(name)         # user should also have their own directory created
-
-
 
 class File:
     # user is saved to database
