@@ -1,6 +1,11 @@
 import sqlite3
+from hashlib import sha256
+import secrets
 
-def init_db(db_path='sfs.db'):
+# global vars
+db_path='sfs.db'
+
+def init_db():
 
     # connect and create cursor
     conn = sqlite3.connect(db_path)
@@ -18,6 +23,19 @@ def init_db(db_path='sfs.db'):
         )
         '''
     )
+
+    # sessions table
+    cursor.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS sessions (
+            session_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            token TEXT UNIQUE NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users (user_id)
+        )
+        '''
+    )
+
 
     # groups table
     cursor.execute(
@@ -44,6 +62,10 @@ def init_db(db_path='sfs.db'):
         )
         '''
     )
+
+    # directory table
+
+
     # ---------------------------------------------
     # NOTE:
     #   sqlite creates a special table called sqlite_sequence when
@@ -55,38 +77,219 @@ def init_db(db_path='sfs.db'):
     conn.close()
 
 
-def db_add_user(username, password_hash, db_path='sfs.db'):
+def db_get_user(uid):
 
-    # connect and create cursor
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
 
-    # add user
-    cursor.execute(
-        '''
-        INSERT INTO users (username, password_hash) VALUES (?, ?)
-        ''', 
-        (username, password_hash)
-    )
+        cursor.execute(
+            '''
+            SELECT * 
+            FROM users 
+            WHERE user_id=?
+            ''', 
+            (uid,)
+        )
 
-    # commit changes and close db
-    conn.commit()
-    conn.close()
+        user = cursor.fetchone()
 
-def db_get_user(username, db_path='sfs.db'):
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        user = None
 
-    # connect and create cursor
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-
-    cursor.execute(
-        'SELECT * FROM users WHERE username=?', 
-        (username,)
-    )
-
-    user = cursor.fetchone()
-
-    # close db
-    conn.close()
+    finally:
+        conn.close()
 
     return user
+
+
+def db_get_all_users():
+    userlist = []
+
+    try:
+
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            '''
+            SELECT * 
+            FROM users
+            '''
+        )
+
+        users = cursor.fetchall()
+
+        for user in users:
+
+            userlist.append({
+                'user_id': user[0],
+                'username': user[1],
+                # 'password_hash': user[2]
+            })
+
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+    
+    finally:
+        # Ensure the database connection is closed
+        conn.close()
+
+    return userlist
+
+
+
+def db_add_user(username, password):
+
+    # hash the pw with sha256
+    password_hash = sha256(password.encode()).hexdigest()
+
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # attempt to add user
+        cursor.execute(
+            '''
+            INSERT INTO users (username, password_hash) 
+            VALUES (?, ?)
+            ''', 
+            (username, password_hash)
+        )
+
+        # Commit changes
+        conn.commit()
+        print("user added successfully.")
+
+    except sqlite3.IntegrityError:
+        print("error - username already exists")
+
+    except sqlite3.Error as e:
+        print(f"error occurred: {e}")
+
+    finally:
+        # Ensure the database connection is closed
+        conn.close()
+
+
+
+def db_auth_user(username, password):
+
+    # hash the pw with sha256
+    password_hash = sha256(password.encode()).hexdigest()
+
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            '''
+            SELECT user_id 
+            FROM users 
+            WHERE username = ? AND password_hash = ?
+            ''', 
+            (username, password_hash)
+        )
+
+        fetcheduser = cursor.fetchone()
+
+        # return user_id
+        if fetcheduser:
+            return fetcheduser[0]
+
+    except sqlite3.Error as e:
+        print(f"error occurred: {e}")
+        fetcheduser = None
+
+    finally:
+        conn.close()
+
+    return None
+
+
+
+def db_create_session(user_id):
+
+    # init token
+    token = secrets.token_hex(16)
+
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            '''
+            INSERT INTO sessions (user_id, token) 
+            VALUES (?, ?)
+            ''', 
+            (user_id, token)
+        )
+
+        conn.commit()
+
+    except sqlite3.Error as e:
+        print(f"error occurred: {e}")
+        token = None
+
+    finally:
+        conn.close()
+
+    return token
+
+
+
+def db_get_session_user_id(token):
+
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            '''
+            SELECT user_id 
+            FROM sessions 
+            WHERE token = ?
+            ''', 
+            (token,)
+        )
+
+        session = cursor.fetchone()
+
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+        session = None
+
+    finally:
+        conn.close()
+
+    if session:
+        return session[0]
+    else:
+        return None
+
+
+# testing
+if __name__ == '__main__':
+    init_db() # to init the db
+    yorn = input("add user? [y/n] >")
+    if yorn.lower() == 'y':
+        uu = input("u: ")
+        pp = input("p: ")
+        db_add_user(uu, pp)
+
+
+    for usern in db_get_all_users():
+        print(usern)
+
+    while True:
+        print("auth------------------------")
+        uname = input("username: ")
+        pw = input("password: ")
+        userAuth = db_auth_user(uname, pw)
+        if userAuth:
+            print("auth succeeded")
+            user_token = db_create_session(userAuth)
+            print("session created for user_id =",  db_get_session_user_id(user_token), " with token =", user_token )
+
+
