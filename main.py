@@ -1,7 +1,6 @@
 import os
 import shutil
-import pycrypto
-
+import commands
 import sys
 # get access to db-functions from the dbsetup file
 from dbsetup import init_db, db_add_user, db_get_user
@@ -39,14 +38,14 @@ def create_dir(name, owner):
     # do some database stuff
     return dir
 
-
-
-
 def main():
     while True:
         cmd = input("\nSFS$ : ").split()
 
-
+        # switch statements using input cmd
+        # check permissions whenever a user executes these commands
+        if cmd[0] == "ls":
+            commands.ls()
     """
 
     Your SFS should support common commands in the Linux file system (while you
@@ -66,10 +65,7 @@ def main():
 
     """
 
-        # switch statements using input cmd
-        # check permissions whenever a user executes these commands
-        if cmd == "ls":
-            command.ls()
+
 
 def login():
     currentuser_name = input("Username: ")
