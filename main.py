@@ -41,16 +41,10 @@ def create_dir(name, owner):
 
 
 
-def command_ls():
-    files = os.listdir('.')
-    for file in files: 
-        print(file, end="  ")
-
-
 
 def main():
     while True:
-        cmd = input("\nSFS$ : ")
+        cmd = input("\nSFS$ : ").split()
 
 
     """
@@ -75,7 +69,7 @@ def main():
         # switch statements using input cmd
         # check permissions whenever a user executes these commands
         if cmd == "ls":
-            command_ls()
+            command.ls()
 
 def login():
     currentuser_name = input("Username: ")
