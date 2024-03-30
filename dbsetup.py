@@ -12,14 +12,14 @@ def init_db():
     cursor = conn.cursor()
 
     # create tables -------------------------------
-
     # users table
     cursor.execute(
         '''
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL
+            password_hash TEXT NOT NULL,
+            groups TEXT 
         )
         '''
     )
@@ -66,11 +66,12 @@ def init_db():
         '''
         CREATE TABLE IF NOT EXISTS files (
             file_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+            real_name TEXT NOT NULL,
+            encrypted_name TEXT,
             owner_id INTEGER NOT NULL,
             dir_id INTEGER NOT NULL,
             permissions TEXT NOT NULL,
-            content BLOB,
+            is_selected INTEGER NOT NULL,
             FOREIGN KEY (owner_id) REFERENCES users (user_id),
             FOREIGN KEY (dir_id) REFERENCES directories (dir_id)
         )
@@ -107,7 +108,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS user_file_permissions (
             user_id INTEGER,
             file_id INTEGER,
-            permission_id INTEGER,
+            permission_mode TEXT,
             FOREIGN KEY (user_id) REFERENCES users (user_id),
             FOREIGN KEY (file_id) REFERENCES files (file_id),
             FOREIGN KEY (permission_id) REFERENCES permissions (permission_id),
@@ -145,7 +146,7 @@ def init_db():
     conn.close()
 
 
-def db_get_user(uid):
+def db_get_user_id(username):
 
     try:
         conn = sqlite3.connect(db_path)
@@ -157,7 +158,7 @@ def db_get_user(uid):
             FROM users 
             WHERE user_id=?
             ''', 
-            (uid,)
+            (username,)
         )
 
         user = cursor.fetchone()
@@ -207,8 +208,7 @@ def db_get_all_users():
     return userlist
 
 
-
-def db_add_user(username, password):
+def db_add_user(username, password, group):
 
     # hash the pw with sha256
     password_hash = sha256(password.encode()).hexdigest()
@@ -220,10 +220,10 @@ def db_add_user(username, password):
         # attempt to add user
         cursor.execute(
             '''
-            INSERT INTO users (username, password_hash) 
-            VALUES (?, ?)
+            INSERT INTO users (username, password_hash, groups) 
+            VALUES (?, ?, ?)
             ''', 
-            (username, password_hash)
+            (username, password_hash, group)
         )
 
         # Commit changes
@@ -239,7 +239,6 @@ def db_add_user(username, password):
     finally:
         # Ensure the database connection is closed
         conn.close()
-
 
 
 def db_auth_user(username, password):
@@ -274,8 +273,6 @@ def db_auth_user(username, password):
         conn.close()
 
     return None
-
-
 
 def db_create_session(user_id):
 
@@ -342,7 +339,7 @@ def create_directory(dir_name):
     print("create dir here")
 
 
-def create_file(file_name):
+def db_create_file(file_name):
     print("create file here")
 
 
@@ -360,7 +357,8 @@ if __name__ == '__main__':
     if yorn.lower() == 'y':
         uu = input("u: ")
         pp = input("p: ")
-        db_add_user(uu, pp)
+        group = input("group: ")
+        db_add_user(uu, pp, group)
 
 
     for usern in db_get_all_users():

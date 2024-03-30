@@ -2,13 +2,14 @@ import os
 
 
 def pwd(): # see current directory
+    curdir = os.getcwd()
+    print("Current dir: ", curdir)
     return 
 
 def ls():
     files = os.listdir('.')
     for file in files: 
         print(file, end="  ")
-
 
 
 def cd(): # change dir
