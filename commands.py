@@ -12,7 +12,8 @@ def ls():
         print(file, end="  ")
 
 
-def cd(): # change dir
+def cd(directory): # change dir
+    os.system("cd" + directory)
     return 
 
 def mkdir(): # make new subdir in current directory
