@@ -145,6 +145,34 @@ def init_db():
     conn.commit()
     conn.close()
 
+def db_check_user_exists(username):
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            '''
+            SELECT * 
+            FROM users 
+            WHERE username=?
+            ''', 
+            (username,)
+        )
+
+        user = cursor.fetchone()
+        if user:
+            return True
+        else:
+            return False
+
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        user = None
+
+    finally:
+        conn.close()
+
+
 
 def db_get_user_id(username):
 

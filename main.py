@@ -3,7 +3,7 @@ import shutil
 import commands
 import sys
 # get access to db-functions from the dbsetup file
-from dbsetup import init_db, db_add_user, db_get_user_id
+from dbsetup import init_db, db_add_user, db_get_user_id, db_check_user_exists
 
 PERMISSION_USER = "user"
 PERMISSION_GROUP = "group"
@@ -46,6 +46,8 @@ def main():
             commands.ls()  
         elif cmd[0] == "pwd":
             commands.pwd()
+        elif cmd[0] == "login":
+            login()
         else:
             print("Command not recognized. Type 'cmds' to list all commands.")
     """
@@ -112,6 +114,12 @@ def check_directory_perms(dir_id):
 def login():
     currentuser_name = input("Username: ")
 
+    if db_check_user_exists(currentuser_name):
+        print("user exists")
+    else: 
+        print(f"User does not exist! Register new user {currentuser_name}? Y/N :")
+        createuser_response = input()
+        
     # Check if user exists in db
 
     currentuser_pass = input("Pass: ")
