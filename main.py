@@ -1,9 +1,5 @@
-import os
-import shutil
 import commands
-import sys
-# get access to db-functions from the dbsetup file
-from dbsetup import init_db, db_add_user, db_get_user_id, db_check_user_exists
+from dbsetup import db_add_user, db_auth_user, db_check_user_exists, get_private_key, get_public_key
 
 PERMISSION_USER = "user"
 PERMISSION_GROUP = "group"
@@ -113,16 +109,30 @@ def check_directory_perms(dir_id):
 
 def login():
     currentuser_name = input("Username: ")
-
+    new_user = False
     if db_check_user_exists(currentuser_name):
         print("user exists")
     else: 
         print(f"User does not exist! Register new user {currentuser_name}? Y/N :")
         createuser_response = input()
-        
-    # Check if user exists in db
-
+        if createuser_response == "Y":
+            new_user = True      
     currentuser_pass = input("Pass: ")
+
+    if new_user: 
+        try:
+            db_add_user(currentuser_name,currentuser_pass)
+            CURRENT_USER = currentuser_name
+        except:
+            print("error with uploading user to DB")
+        
+    else: 
+        if db_auth_user(currentuser_name, currentuser_pass):
+            print("Sucessful Login!")
+            CURRENT_USER = currentuser_name
+            print("Welcome: "+CURRENT_USER)
+        else: 
+            print("Invalid Password")
 
     # Check if password is correct -> do some encryption/decryption on db side
     # set CURRENT_USER variable to the unique ID of the user that just logged in.

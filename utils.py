@@ -3,10 +3,8 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from dbsetup import db_check_user_exists
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
-import sqlite3
 
 def run_linux_command(command):
     # Execute the command
@@ -72,30 +70,29 @@ def decrypt_with_private_key(private_key, encrypted_data):
     )
     return decrypted_data
 
-def validate_user(username, key):
-    if not db_check_user_exists(username):
-        return -1
+# def validate_user(username_asking, username_key):
+#     if not db_check_user_exists(username_asking):
+#         return -1
+#     #check permissions for username_asking TODO
     
-    return 
+#     return get_public_key(username_key), get_private_key(username_key)
 
-def generate_key_pair():
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048,
-        backend=default_backend()
-    )
-    return private_key
 
 def serialize_key(key):
     """Serialize a public or private key."""
+    if isinstance(key, rsa.RSAPublicKey):
+        return serialize_public_key(key)
+    elif isinstance(key, rsa.RSAPrivateKey):
+        return serialize_private_key(key)
+    else:
+        raise ValueError("Unsupported key type")
+
+def serialize_public_key(key):
+    """Serialize a public key."""
     return key.public_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PublicFormat.SubjectPublicKeyInfo
     )
-
-def deserialize_public_key(serialized_key):
-    """Deserialize a serialized public key."""
-    return serialization.load_pem_public_key(serialized_key)
 
 def serialize_private_key(key):
     """Serialize a private key."""
@@ -105,42 +102,14 @@ def serialize_private_key(key):
         encryption_algorithm=serialization.NoEncryption()
     )
 
-def deserialize_private_key(serialized_key):
-    """Deserialize a serialized private key."""
-    return serialization.load_pem_private_key(
+
+def deserialize_key(serialized_key):
+    """Deserialize a serialized key."""
+    # Determine the key type based on the serialized key data
+    key_type = serialization.load_pem_private_key if b"PRIVATE" in serialized_key else serialization.load_pem_public_key
+
+    # Deserialize the key using the appropriate function
+    return key_type(
         serialized_key,
-        password=None,
+        password=None  # Assuming no password protection for keys
     )
-
-def retrieve_private_key(username):
-    conn = sqlite3.connect('your_database.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT private_key FROM users WHERE username=?", (username,))
-    row = cursor.fetchone()
-    conn.close()
-
-    if row:
-        return deserialize_private_key(row[0])
-    else:
-        return None
-
-def retrieve_public_key(username):
-    conn = sqlite3.connect('your_database.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT public_key FROM users WHERE username=?", (username,))
-    row = cursor.fetchone()
-    conn.close()
-
-    if row:
-        return serialization.load_pem_public_key(row[0])
-    else:
-        return None
-    
-# Example usage:
-# key = generate_key()
-# message = "Hello, this is a secret message."
-# encrypted_message = encrypt_message(message, key)
-# print("Encrypted message:", encrypted_message)
-
-# decrypted_message = decrypt_message(encrypted_message, key)
-# print("Decrypted message:", decrypted_message)

@@ -2,6 +2,8 @@ import sqlite3
 from hashlib import sha256
 import secrets
 
+from utils import deserialize_key, generate_key_pair, serialize_key
+
 # global vars
 db_path='sfs.db'
 
@@ -19,7 +21,22 @@ def init_db():
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
-            groups TEXT 
+            groups TEXT,
+            public_key BLOB,
+            private_key BLOB
+        )
+        '''
+    )
+
+    cursor.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            groups TEXT,
+            public_key BLOB,
+            private_key BLOB
         )
         '''
     )
@@ -145,6 +162,28 @@ def init_db():
     conn.commit()
     conn.close()
 
+def create_user_db(username, password_hash):
+    """
+    Create an user in the database.
+
+    Args:
+        username (str): The username of the admin user.
+        password_hash (str): The hash of the admin user's password.
+    """
+    # Generate RSA key pair for the admin user
+    private_key, public_key = generate_key_pair()
+
+    # Serialize the public and private keys
+    serialized_public_key = serialize_key(public_key)
+    serialized_private_key = serialize_key(private_key)
+
+    # Insert the admin user into the database
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO users (username, password_hash, public_key, private_key, is_admin) VALUES (?, ?, ?, ?, 1)", (username, password_hash, serialized_public_key, serialized_private_key))
+    conn.commit()
+    conn.close()
+
 def db_check_user_exists(username):
     try:
         conn = sqlite3.connect(db_path)
@@ -236,23 +275,22 @@ def db_get_all_users():
     return userlist
 
 
-def db_add_user(username, password, group):
-
-    # hash the pw with sha256
-    password_hash = sha256(password.encode()).hexdigest()
+def db_add_user(username, password):
 
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
+        # hash the pw with sha256
+        password_hash = sha256(password.encode()).hexdigest()
+        # Generate RSA key pair for the admin user
+        private_key, public_key = generate_key_pair()
+
+        # Serialize the public and private keys
+        serialized_public_key = serialize_key(public_key)
+        serialized_private_key = serialize_key(private_key)
         # attempt to add user
-        cursor.execute(
-            '''
-            INSERT INTO users (username, password_hash, groups) 
-            VALUES (?, ?, ?)
-            ''', 
-            (username, password_hash, group)
-        )
+        cursor.execute("INSERT INTO users (username, password_hash, public_key, private_key) VALUES (?, ?, ?, ?)", (username, password_hash, serialized_public_key, serialized_private_key))
 
         # Commit changes
         conn.commit()
@@ -370,12 +408,34 @@ def create_directory(dir_name):
 def db_create_file(file_name):
     print("create file here")
 
+def get_private_key(username):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT private_key FROM users WHERE username=?", (username,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row:
+        serialized_private_key = row[0]
+        private_key = deserialize_key(serialized_private_key)
+        return private_key
+    else:
+        return None
 
 
+def get_public_key(username):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT public_key FROM users WHERE username=?", (username,))
+    row = cursor.fetchone()
+    conn.close()
 
-
-
-
+    if row:
+        serialized_public_key = row[0]
+        public_key = deserialize_key(serialized_public_key)
+        return public_key
+    else:
+        return None
 
 
 # testing
