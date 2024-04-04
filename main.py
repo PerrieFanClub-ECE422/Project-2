@@ -1,53 +1,48 @@
 import sys
 import commands
-from dbsetup import db_add_group, db_add_user, db_auth_user, db_check_user_exists, get_private_key, get_public_key, db_create_directory, db_get_user_id, db_get_directory_id, db_get_directory_perms, db_get_directory_owner, db_create_directory, init_db
+import dbsetup 
 import sqlite3
 import os
-from InquirerPy import inquirer
+import getpass
 
-PERMISSION_USER = "user"
-PERMISSION_GROUP = "group"
-PERMISSION_ALL = "all"
 db_path = os.getcwd() + "/sfs.db"
 
 
 def main():
-    init_db()  # Initialize the database and tables if they don't exist
-    print("\nWelcome to the Secure File System (SFS)")
-    print("Choose an option:")
-    print("1. Login")
-    print("2. Register")
-    print("3. Create Group")
-    print("4. Exit")
-    
-    choice = input("Enter your choice (1-4): ")
-    if choice == "1":
-        login()
-    elif choice == "2":
-        register()
-    elif choice == "3":
-        create_group_prompt()
-    elif choice == "4":
-        sys.exit()
-    else:
-        print("Invalid choice. Please enter a number from 1 to 4.")
+    print("\nWelcome to the PERRIEFANCLUB SFS :)")
+    dbsetup.init_db()  # Initialize the database and tables if they don't exist
+    cmds = "[1]Login \t[2]Register \t[3]Create Group \t[4]Exit"
+    while True:
+        print(cmds)
+        cmd = input("\n--- SFS$ ").split()
+        if len(cmd) < 1:
+            print("invalid cmd")
+        elif cmd[0] == "1":
+            login()
+        elif cmd[0] == "2":
+            register() 
+        elif cmd[0] == "3":
+            create_group_prompt()
+        elif cmd[0] == "4" :
+            break # quit the program
+        else:
+            print("invalid cmd")
 
 def login():
     username = input("Enter username: ")
-    password = inquirer.secret(message="Enter password: ", transformer=lambda _: "[hidden]").execute()
+    password = getpass.getpass("Enter password: ")
     
     if login_user(username, password):  # Login user using the database
         file_system(username)
     else:
-        if not db_check_user_exists(username): 
+        if not dbsetup.db_check_user_exists(username): 
             print("User does not exist, please register before logging in.")
         else: 
             print("Invalid Password")
-        main()
 
 def login_user(username, password):
     try:
-        if not db_auth_user(username, password):
+        if not dbsetup.db_auth_user(username, password):
             print("Invalid Credentials, try again")
             return False
         print("Successful login, Welcome " + username)
@@ -57,19 +52,18 @@ def login_user(username, password):
 
 def register():
     username = input("Enter username: ")
-    password = inquirer.secret(message="Enter password: ", transformer=lambda _: "[hidden]").execute()
+    password = getpass.getpass("Enter password: ")
     
     # Optional: Implement group selection logic if needed
     # For simplicity, assume group_name is either entered by the user or null
     group_name = None  # You can modify this to allow users to select a group during registration
-    db_add_user(username.lower(), password, group_name)
-    main() 
+    dbsetup.db_add_user(username.lower(), password, group_name)
+
 
 def create_group_prompt():
-    group_name = inquirer.text(message="Enter group name: ").execute()
+    group_name = getpass.getpass("Enter group name: ")
     try:
-        db_add_group(group_name)
-        main()
+        dbsetup.db_add_group(group_name)
     except sqlite3.IntegrityError:
         print("Group already exists.") 
     
@@ -170,9 +164,9 @@ def check_directory_perms(curruser, dir_name, dir_path):
         print(f"{curruser}:No permission to access directory")
         return False
     else:
-        owner_id = db_get_user_id(curruser)
-        dir_perms = db_get_directory_perms(owner_id, dir_name, dir_path)
-        dir_owner_id = db_get_directory_owner(dir_name, dir_path)
+        owner_id = dbsetup.db_get_user_id(curruser)
+        dir_perms = dbsetup.db_get_directory_perms(owner_id, dir_name, dir_path)
+        dir_owner_id = dbsetup.db_get_directory_owner(dir_name, dir_path)
         print(f"{owner_id}, {dir_path}, {dir_name}")
         
         if dir_perms[0] == "all":
@@ -192,8 +186,4 @@ def check_directory_perms(curruser, dir_name, dir_path):
     # CURRENT_USER = <query to get unique ID>
 
 if __name__ == '__main__':
-    print("Welcome to the SFS")
-    print("<Authentication stuff>")
-    print("Type 'login' to login to the SFS. Type 'cmds' to list all commands.")
-    # we do some authentication before we go to main
     main()
