@@ -3,9 +3,9 @@ from hashlib import sha256
 import secrets
 import commands
 from utils import deserialize_private_key, deserialize_public_key, encrypt_with_public_key, generate_key_pair, serialize_private_key, serialize_public_key
-
+import os
 # global vars
-db_path='sfs.db'
+db_path= os.getcwd() + '/sfs.db'
 ROOT_PARENT_ID = 0
 
 def init_db():
@@ -75,6 +75,7 @@ def init_db():
             encrypted_dir_name TEXT NOT NULL,
             parent_dir_id INTEGER,
             owner_id INTEGER NOT NULL,
+            dir_path TEXT NOT NULL,
             permissions TEXT NOT NULL,
             FOREIGN KEY (parent_dir_id) REFERENCES directories (dir_id),
             FOREIGN KEY (owner_id) REFERENCES users (user_id)
@@ -89,11 +90,12 @@ def init_db():
             encrypted_dir_name,
             parent_dir_id, 
             owner_id,
+            dir_path,
             permissions
             ) 
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?,?)
         ''', 
-        ("root", "encryped_dir_name", 0, 0, "all")
+        ("root", "encryped_dir_name", 0, 0, "root", "all")
     )
 
     #cursor.execute("DROP TABLE IF EXISTS files")
@@ -210,6 +212,90 @@ def db_check_user_exists(username):
 
 
 
+def db_get_directory_perms(owner_id, dir_name, dir_path):
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            SELECT permissions 
+            FROM directories 
+            WHERE owner_id = ? 
+            AND dir_name = ? 
+            AND dir_path = ?
+            ''', 
+            (owner_id, dir_name, dir_path)
+        )
+        dir_perms = cursor.fetchone()
+
+        if dir_perms:
+            print("Directory perms found! ", dir_perms)
+            return dir_perms
+        else:
+            print("No dir perms found, ", dir_perms)
+            return None
+
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+
+
+
+def db_get_directory_id(dir_name, dir_path):
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            SELECT dir_id 
+            FROM directories 
+            WHERE dir_name = ? 
+            AND dir_path = ?
+            ''', 
+            (dir_name, dir_path)
+        )
+        dir_id = cursor.fetchone()
+
+        if dir_id:
+            print("Directory ID found! ", dir_id)
+            return dir_id
+        else:
+            print("No ID found, ", dir_id)
+            return None
+
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+
+
+def db_get_directory_owner(dir_name, dir_path):
+
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            '''
+            SELECT owner_id 
+            FROM directories 
+            WHERE dir_name = ? 
+            AND dir_path = ? 
+            ''', 
+            (dir_name, dir_path)
+        )
+
+        dir_owner_id = cursor.fetchone()[0]
+
+        if dir_owner_id is not None:
+            return dir_owner_id
+        else:
+            return None
+
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+
+    finally:
+        conn.close()
+
+
 def db_get_user_id(username):
 
     try:
@@ -225,17 +311,19 @@ def db_get_user_id(username):
             (username,)
         )
 
-        user = cursor.fetchone()
+        user_id = cursor.fetchone()[0]
+
+        if user_id is not None:
+            return user_id
+        else:
+            return None
 
     except sqlite3.Error as e:
         print(f"Database error: {e}")
-        user = None
+        user_id = None
 
     finally:
         conn.close()
-
-    return user[0]
-
 
 def db_get_all_users():
     userlist = []
@@ -467,14 +555,17 @@ def db_get_session_user_id(token):
 
 
 
-def db_create_directory(dir_name, owner_name, parent_dir_id):
+def db_create_directory(dir_name, owner_name):
 
     owner_id = db_get_user_id(owner_name)
     print(owner_id)
+    new_dir_path = commands.pwd() + "/" + dir_name
+    print("New dir path: ", new_dir_path)
+
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT * FROM directories WHERE dir_name = ? AND parent_dir_id = ?", (dir_name, parent_dir_id))
+        cursor.execute("SELECT * FROM directories WHERE dir_name = ? AND dir_path = ?", (dir_name, new_dir_path))
         result = cursor.fetchone()
         if result is not None:
             print("Directory already exists")
@@ -487,19 +578,22 @@ def db_create_directory(dir_name, owner_name, parent_dir_id):
                     encrypted_dir_name,
                     parent_dir_id,
                     owner_id,
+                    dir_path,
                     permissions
                     )
-                    VALUES (?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?,?,?)
                     ''', 
-                    (dir_name, "encrypted_dir_name",parent_dir_id, owner_id, "user")
+                    (dir_name, "encrypted_dir_name",0, owner_id, new_dir_path, "user")
                 )
 
             conn.commit()
             print(f"Directory {dir_name} added to db for {owner_name}")
             # populate files database with name, hashed name, owner id, permission type, content = empty for now
+
     except sqlite3.Error as e:
         print("SQLite error:", e)
         return None
+
 
     finally:
         conn.close()
