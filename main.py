@@ -20,9 +20,9 @@ def main():
         elif cmd[0] == "login":
             login()
         elif cmd[0] == "mkdir":
-            commands.mkdir(cmd[1])
+            commands.mkdir(cmd[1], CURRENT_USER)
         elif cmd[0] == "touch":
-            commands.touch(cmd[1])
+            commands.touch(cmd[1], CURRENT_USER)
         else:
             print("Command not recognized. Type 'cmds' to list all commands.")
     """
@@ -103,7 +103,7 @@ def login():
         #create a new directory for the user in database
         db_create_directory(currentuser_name, currentuser_name, 0)
         #create a new directory for the user in root
-        commands.mkdir(currentuser_name)
+        commands.mkdir(currentuser_name, currentuser_name)
         CURRENT_USER = currentuser_name
      
     else: 

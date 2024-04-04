@@ -66,12 +66,13 @@ def init_db():
     )
 
     # directory table
-    #cursor.execute("DROP TABLE IF EXISTS directories")
+    cursor.execute("DROP TABLE IF EXISTS directories")
     cursor.execute(
         '''
         CREATE TABLE IF NOT EXISTS directories (
             dir_id INTEGER PRIMARY KEY AUTOINCREMENT,
             dir_name TEXT NOT NULL,
+            encrypted_dir_name TEXT NOT NULL,
             parent_dir_id INTEGER,
             owner_id INTEGER NOT NULL,
             permissions TEXT NOT NULL,
@@ -85,13 +86,14 @@ def init_db():
         '''
         INSERT INTO directories (
             dir_name, 
+            encrypted_dir_name,
             parent_dir_id, 
             owner_id,
             permissions
             ) 
-            VALUES (?, ?, ?,?)
+            VALUES (?, ?, ?, ?, ?)
         ''', 
-        ("root", 0, 0, "all")
+        ("root", "encryped_dir_name", 0, 0, "all")
     )
 
     #cursor.execute("DROP TABLE IF EXISTS files")
@@ -435,13 +437,14 @@ def db_create_directory(dir_name, owner_name, parent_dir_id):
             cursor.execute(
                 '''INSERT INTO directories (
                     dir_name, 
+                    encrypted_dir_name,
                     parent_dir_id,
                     owner_id,
                     permissions
                     )
                     VALUES (?, ?, ?, ?)
                     ''', 
-                    (dir_name, parent_dir_id, owner_id, "user")
+                    (dir_name, "encrypted_dir_name",parent_dir_id, owner_id, "user")
                 )
 
             conn.commit()
@@ -477,7 +480,6 @@ def db_get_directory_id(dir_name, parent_dir_id):
         return None
 
 def db_create_file(file_name, owner_name):
-    print("create file here")
     #TODO: encrypt info in function caller, decrypt info here
 
     owner_id = db_get_user_id(owner_name)

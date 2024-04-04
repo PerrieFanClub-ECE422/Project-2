@@ -18,7 +18,7 @@ def cd(directory): # change dir
     os.system("cd" + directory)
     return 
 
-def mkdir(new_dir): # make new subdir in current directory
+def mkdir(new_dir, owner_name): # make new subdir in current directory
     current_dir = os.getcwd()
 
     # Create a new directory inside the current directory
@@ -29,7 +29,7 @@ def mkdir(new_dir): # make new subdir in current directory
 
     return 
 
-def touch(file_name): # create a new file (txt)
+def touch(file_name, owner_name): # create a new file (txt)
     try:
         # Check if the file already exists
         if not os.path.exists(file_name):
