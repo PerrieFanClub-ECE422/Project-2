@@ -7,8 +7,6 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
-from dbsetup import get_admin_keys
-
 def run_linux_command(command):
     # Execute the command
     exit_status = os.system(command)
