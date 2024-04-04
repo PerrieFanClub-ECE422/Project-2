@@ -2,7 +2,7 @@ import sqlite3
 from hashlib import sha256
 import secrets
 import commands
-from utils import deserialize_key, generate_key_pair, serialize_key
+from utils import deserialize_private_key, deserialize_public_key, encrypt_with_public_key, generate_key_pair, serialize_private_key, serialize_public_key
 
 # global vars
 db_path='sfs.db'
@@ -181,28 +181,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-def create_user_db(username, password_hash):
-    """
-    Create an user in the database.
-
-    Args:
-        username (str): The username of the admin user.
-        password_hash (str): The hash of the admin user's password.
-    """
-    # Generate RSA key pair for the admin user
-    private_key, public_key = generate_key_pair()
-
-    # Serialize the public and private keys
-    serialized_public_key = serialize_key(public_key)
-    serialized_private_key = serialize_key(private_key)
-
-    # Insert the admin user into the database
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO users (username, password_hash, public_key, private_key, is_admin) VALUES (?, ?, ?, ?, 1)", (username, password_hash, serialized_public_key, serialized_private_key))
-    conn.commit()
-    conn.close()
-
 def db_check_user_exists(username):
     try:
         conn = sqlite3.connect(db_path)
@@ -293,8 +271,75 @@ def db_get_all_users():
 
     return userlist
 
+def get_admin_keys():
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
 
-def db_add_user(username, password):
+        admin_username = 'admin'  # Assuming the admin's username is 'admin'
+        cursor.execute('SELECT private_key, public_key FROM users WHERE username = ?', (admin_username,))
+        admin_keys = cursor.fetchone()
+
+        if admin_keys:
+            private_key = deserialize_private_key(admin_keys[0])
+            public_key = deserialize_public_key(admin_keys[1])
+            return private_key, public_key
+        else:
+            print("Admin user not found.")
+            return None, None
+
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+        return None, None
+
+    finally:
+        conn.close()
+        
+def db_add_group(group_name):
+    private_key, public_key = get_admin_keys()
+    if private_key and public_key:
+        conn = sqlite3.connect(db_path)
+        try:
+            cursor = conn.cursor()
+
+            # Encrypt the group name using the admin's public key
+            encrypted_group_name = encrypt_with_public_key(public_key, group_name.encode('utf-8'))
+
+            # Insert the encrypted group name into the groups table
+            cursor.execute('INSERT INTO groups (name) VALUES (?)', (encrypted_group_name,))
+            conn.commit()
+            print("Group added successfully.")
+            return True
+        except sqlite3.Error as e:
+            print(f"An error occurred: {e}")
+        finally:
+            conn.close()
+    else:
+        print("Admin keys not found, you need an Admin account in order to make groups")
+        return False
+    
+def db_get_existing_groups():
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT name FROM groups')
+    groups = cursor.fetchall()
+
+    conn.close()
+
+    return [group[0] for group in groups]
+
+def db_assign_user_to_groups(username, selected_groups):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    for group in selected_groups:
+        cursor.execute('INSERT INTO users (username, group_name) VALUES (?, ?)', (username, group))
+
+    conn.commit()
+    conn.close()
+
+def db_add_user(username, password, group_name=None):
 
     try:
         conn = sqlite3.connect(db_path)
@@ -306,14 +351,16 @@ def db_add_user(username, password):
         private_key, public_key = generate_key_pair()
 
         # Serialize the public and private keys
-        serialized_public_key = serialize_key(public_key)
-        serialized_private_key = serialize_key(private_key)
+        serialized_public_key = serialize_public_key(public_key)
+        serialized_private_key = serialize_private_key(private_key)
         # attempt to add user
-        cursor.execute("INSERT INTO users (username, password_hash, public_key, private_key) VALUES (?, ?, ?, ?)", (username, password_hash, serialized_public_key, serialized_private_key))
+        if username.lower() == "admin":
+            cursor.execute("INSERT INTO users (username, password_hash, group_name, private_key, public_key) VALUES (?, ?, ?, ?, ?)", (username, password_hash, group_name, serialized_private_key, serialized_public_key))
+        else:
+            cursor.execute("INSERT INTO users (username, password_hash, group_name, private_key, public_key) VALUES (?, ?, ?, ?, ?)", (username, password_hash, group_name, None, None))
 
         # Commit changes
         conn.commit()
-        print("user added successfully.")
 
     except sqlite3.IntegrityError:
         print("error - username already exists")
@@ -513,7 +560,7 @@ def get_private_key(username):
 
     if row:
         serialized_private_key = row[0]
-        private_key = deserialize_key(serialized_private_key)
+        private_key = deserialize_private_key(serialized_private_key)
         return private_key
     else:
         return None
@@ -528,7 +575,7 @@ def get_public_key(username):
 
     if row:
         serialized_public_key = row[0]
-        public_key = deserialize_key(serialized_public_key)
+        public_key = deserialize_public_key(serialized_public_key)
         return public_key
     else:
         return None
