@@ -1,6 +1,6 @@
 import os
 import dbsetup
-ROOT_DIR = "/home/ubuntu/Project-2"
+ROOT_DIR = "/home/ubuntu/Project-2/root"
 
 def pwd(): # see current directory
     curdir = os.getcwd()

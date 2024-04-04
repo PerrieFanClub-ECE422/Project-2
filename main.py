@@ -57,7 +57,10 @@ def register():
     # Optional: Implement group selection logic if needed
     # For simplicity, assume group_name is either entered by the user or null
     group_name = None  # You can modify this to allow users to select a group during registration
+
     dbsetup.db_add_user(username.lower(), password, group_name)
+    commands.mkdir(username.lower(), username.lower())
+    
 
 
 def create_group_prompt():

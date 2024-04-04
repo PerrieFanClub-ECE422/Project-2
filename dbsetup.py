@@ -86,6 +86,12 @@ def init_db():
         ("root", "encryped_dir_name", 0, 0, "root", "all")
     )
 
+    new_dir_path = os.path.join(os.getcwd(), "root")
+    print(new_dir_path)
+    if not os.path.exists(new_dir_path):
+        os.mkdir(new_dir_path)
+    os.chdir(new_dir_path)
+
     #cursor.execute("DROP TABLE IF EXISTS files")
     # files table
     cursor.execute(
