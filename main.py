@@ -14,7 +14,7 @@ def main():
     cmds = "\n[1]Login \t[2]Register \t[3]Create Group \t[4]Exit"
     while True:
         print(cmds)
-        cmd = input("\n--- SFS$ ").split()
+        cmd = input("\n--- > ").split()
         if len(cmd) < 1:
             print("invalid cmd")
         elif cmd[0] == "1":
@@ -72,29 +72,35 @@ def create_group_prompt():
     
  
 def file_system(current_user_name):
+    cmds = "\ncd \t \t => \t change directory\npwd \t \t => \t display current path\nls \t \t => \t list all items\ntouch \t \t => \t create new file\nmkdir \t \t => \t create new directory\ncmds \t \t => \t show all cmds"
+    print(cmds)
     while True:
-        cmd = input("\nSFS$ : ").strip().split()
+        cmd = input("\n------ SFS$ ").strip().split()
         # switch statements using input cmd
         # check permissions whenever a user executes these commands
-        if cmd[0] == "ls":
-            commands.ls()  
+        if len(cmd) < 1:
+            print("invalid cmd")
+        elif cmd[0] == "cd":
+            dir_path = commands.pwd() + "/" + cmd[1]
+            print(f"{cmd[1]}, {dir_path}")
+            if check_directory_perms(current_user_name, cmd[1], dir_path):
+                commands.cd(os.getcwd() + "/" + cmd[1])
         elif cmd[0] == "pwd":
             commands.pwd()
+        elif cmd[0] == "ls":
+            commands.ls()
+        elif cmd[0] == "touch":
+            commands.touch(cmd[1], current_user_name)
         elif cmd[0] == "mkdir":
             dir_path = commands.pwd() # get current path
             dir_name = os.path.basename(dir_path) # name of current directory
             print(f"{dir_path}, {dir_name}")
             if check_directory_perms(current_user_name, dir_name, dir_path):
                 commands.mkdir(cmd[1], current_user_name)
-        elif cmd[0] == "touch":
-            commands.touch(cmd[1], current_user_name)
-        elif cmd[0] == "cd":
-            dir_path = commands.pwd() + "/" + cmd[1]
-            print(f"{cmd[1]}, {dir_path}")
-            if check_directory_perms(current_user_name, cmd[1], dir_path):
-                commands.cd(os.getcwd() + "/" + cmd[1])
+        elif cmd[0] == "cmds":
+            print(cmds)
         else:
-            print("Command not recognized. Type 'cmds' to list all commands.")
+            print("command not recognized; type 'cmds' to list all commands")
     """
 
     Your SFS should support common commands in the Linux file system (while you
