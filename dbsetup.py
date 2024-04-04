@@ -19,25 +19,13 @@ def init_db():
     cursor.execute(
         '''
         CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
-            groups TEXT,
-            public_key BLOB,
-            private_key BLOB
-        )
-        '''
-    )
-
-    cursor.execute(
-        '''
-        CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            groups TEXT,
-            public_key BLOB,
-            private_key BLOB
+            group_name TEXT,
+            private_key BLOB,
+            public_key BLOB,           
+            FOREIGN KEY(group_name) REFERENCES groups(name)
         )
         '''
     )
@@ -119,57 +107,18 @@ def init_db():
     
     ######### UNTESTED ###########################################
 
-    # abstract permission type table
-    cursor.execute(
-        '''
-        CREATE TABLE IF NOT EXISTS permissions (
-            permission_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL
-        );
-        '''
-    )
-    # predefine permissions
-    permissions = ['create', 'delete', 'read', 'write', 'rename']
-    for permission in permissions:
-        cursor.execute(
-            '''
-            INSERT OR IGNORE INTO permissions (name) 
-            VALUES (?)
-            ''', 
-            (permission,)
-        )
-
-
-    # file permissions table
-    cursor.execute(
-        '''
-        CREATE TABLE IF NOT EXISTS user_file_permissions (
-            user_id INTEGER,
-            file_id INTEGER,
-            permission_mode TEXT,
-            FOREIGN KEY (user_id) REFERENCES users (user_id),
-            FOREIGN KEY (file_id) REFERENCES files (file_id),
-            FOREIGN KEY (permission_id) REFERENCES permissions (permission_id),
-            PRIMARY KEY (user_id, file_id, permission_id)
-        );
-        '''
-    )
-
-
     # directory permissions table
-    cursor.execute(
-        '''
-        CREATE TABLE IF NOT EXISTS user_directory_permissions (
-            user_id INTEGER,
-            dir_id INTEGER,
-            permission_id INTEGER,
-            FOREIGN KEY (user_id) REFERENCES users (user_id),
-            FOREIGN KEY (dir_id) REFERENCES directories (dir_id),
-            FOREIGN KEY (permission_id) REFERENCES permissions (permission_id),
-            PRIMARY KEY (user_id, dir_id, permission_id)
-        );
-        '''
-    )
+    # cursor.execute(
+    #     '''
+    #     CREATE TABLE IF NOT EXISTS user_directory_permissions (
+    #         user_id INTEGER,
+    #         dir_id INTEGER,
+    #         FOREIGN KEY (user_id) REFERENCES users (user_id),
+    #         FOREIGN KEY (dir_id) REFERENCES directories (dir_id),
+    #         PRIMARY KEY (user_id, dir_id, permission_id)
+    #     );
+    #     '''
+    # )
 
     ##############################################################
 

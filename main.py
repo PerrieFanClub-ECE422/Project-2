@@ -1,7 +1,10 @@
+import sys
 import commands
-from dbsetup import db_add_user, db_auth_user, db_check_user_exists, get_private_key, get_public_key, db_create_directory, db_get_user_id, db_get_directory_id, db_get_directory_perms, db_get_directory_owner, db_create_directory
+from dbsetup import db_add_group, db_add_user, db_auth_user, db_check_user_exists, get_private_key, get_public_key, db_create_directory, db_get_user_id, db_get_directory_id, db_get_directory_perms, db_get_directory_owner, db_create_directory, init_db
 import sqlite3
 import os
+from InquirerPy import inquirer
+
 PERMISSION_USER = "user"
 PERMISSION_GROUP = "group"
 PERMISSION_ALL = "all"
@@ -9,17 +12,71 @@ db_path = os.getcwd() + "/sfs.db"
 
 
 def main():
-    while True:
-        cmd = input("\nSFS$ : ").split()
-        if cmd[0] == "login":
-            login()
-        else:
-            print("Cmd not recognized")
+    init_db()  # Initialize the database and tables if they don't exist
+    print("\nWelcome to the Secure File System (SFS)")
+    print("Choose an option:")
+    print("1. Login")
+    print("2. Register")
+    print("3. Create Group")
+    print("4. Exit")
+    
+    choice = input("Enter your choice (1-4): ")
+    if choice == "1":
+        login()
+    elif choice == "2":
+        register()
+    elif choice == "3":
+        create_group_prompt()
+    elif choice == "4":
+        sys.exit()
+    else:
+        print("Invalid choice. Please enter a number from 1 to 4.")
 
+def login():
+    username = input("Enter username: ")
+    password = inquirer.secret(message="Enter password: ", transformer=lambda _: "[hidden]").execute()
+    
+    if login_user(username, password):  # Login user using the database
+        file_system(username)
+    else:
+        if not db_check_user_exists(username): 
+            print("User does not exist, please register before logging in.")
+        else: 
+            print("Invalid Password")
+        main()
 
+def login_user(username, password):
+    try:
+        if not db_auth_user(username, password):
+            print("Invalid Credentials, try again")
+            return False
+        print("Successful login, Welcome " + username)
+        return True
+    except sqlite3.IntegrityError:
+        print("Failed login")
+
+def register():
+    username = input("Enter username: ")
+    password = inquirer.secret(message="Enter password: ", transformer=lambda _: "[hidden]").execute()
+    
+    # Optional: Implement group selection logic if needed
+    # For simplicity, assume group_name is either entered by the user or null
+    group_name = None  # You can modify this to allow users to select a group during registration
+    db_add_user(username.lower(), password, group_name)
+    main() 
+
+def create_group_prompt():
+    group_name = inquirer.text(message="Enter group name: ").execute()
+    try:
+        db_add_group(group_name)
+        main()
+    except sqlite3.IntegrityError:
+        print("Group already exists.") 
+    
+ 
 def file_system(current_user_name):
     while True:
-        cmd = input("\nSFS$ : ").split()
+        cmd = input("\nSFS$ : ").strip().split()
         # switch statements using input cmd
         # check permissions whenever a user executes these commands
         if cmd[0] == "ls":
@@ -129,39 +186,6 @@ def check_directory_perms(curruser, dir_name, dir_path):
 
 
     return True
-
-def register():
-    print("Register a new user")
-
-
-
-
-def login():
-    currentuser_name = input("Username: ")
-    new_user = False
-    if db_check_user_exists(currentuser_name):
-        print("user exists")
-    else: 
-        print(f"User does not exist! Register new user {currentuser_name}? Y/N :")
-        createuser_response = input()
-        if createuser_response == "Y":
-            new_user = True      
-    currentuser_pass = input("Pass: ")
-
-    if new_user: 
-        db_add_user(currentuser_name,currentuser_pass)
-        #create a new directory for the user in root
-        commands.mkdir(currentuser_name, currentuser_name)
-        os.chdir(os.getcwd() + "/" + currentuser_name)
-        file_system(currentuser_name)
-     
-    else: 
-        if db_auth_user(currentuser_name, currentuser_pass):
-            print("Sucessful Login!")
-            print("Welcome: "+currentuser_name)
-            file_system(currentuser_name)
-        else: 
-            print("Invalid Password")
 
     # Check if password is correct -> do some encryption/decryption on db side
     # set CURRENT_USER variable to the unique ID of the user that just logged in.
