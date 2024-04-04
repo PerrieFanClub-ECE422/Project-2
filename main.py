@@ -1,28 +1,36 @@
 import commands
-from dbsetup import db_add_user, db_auth_user, db_check_user_exists, get_private_key, get_public_key, db_create_directory
-
+from dbsetup import db_add_user, db_auth_user, db_check_user_exists, get_private_key, get_public_key, db_create_directory, db_get_user_id, db_get_directory_id, db_get_directory_perms
+import sqlite3
+import os
 PERMISSION_USER = "user"
 PERMISSION_GROUP = "group"
 PERMISSION_ALL = "all"
-CURRENT_USER = ""
+db_path = os.getcwd() + "/sfs.db"
 
 
 def main():
     while True:
         cmd = input("\nSFS$ : ").split()
+        if cmd[0] == "login":
+            login()
+        else:
+            print("Cmd not recognized")
 
+
+def file_system(current_user_name):
+    while True:
+        cmd = input("\nSFS$ : ").split()
         # switch statements using input cmd
         # check permissions whenever a user executes these commands
         if cmd[0] == "ls":
             commands.ls()  
         elif cmd[0] == "pwd":
             commands.pwd()
-        elif cmd[0] == "login":
-            login()
         elif cmd[0] == "mkdir":
-            commands.mkdir(cmd[1], CURRENT_USER)
+            if check_directory_perms(current_user_name):
+                commands.mkdir(cmd[1], current_user_name)
         elif cmd[0] == "touch":
-            commands.touch(cmd[1], CURRENT_USER)
+            commands.touch(cmd[1], current_user_name)
         else:
             print("Command not recognized. Type 'cmds' to list all commands.")
     """
@@ -81,10 +89,33 @@ def check_file_perms(filename):
 
     """
 
+def check_directory_perms(curruser, dir_id):
+    #TODO: figure out how we plan on adding info to user_file_permissions and user_directory_permissions
+    #TODO: figre out how to get ID of current directory and selected file
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    if curruser == "":
+        print(f"{curruser}:No permission to access directory")
+        return False
+    else:
+        owner_id = db_get_user_id(curruser)
+        dir_path = commands.pwd()
+        dir_name = os.path.basename(dir_path)
+        dir_perms = db_get_directory_perms(owner_id, dir_name, dir_path)
+        print(f"{owner_id}, {dir_path}, {dir_name}")
+        
+
+       
+
+    return True
+
+def register():
+    print("Register a new user")
 
 
-def check_directory_perms(dir_id):
-    return
+
 
 def login():
     currentuser_name = input("Username: ")
@@ -104,13 +135,14 @@ def login():
         db_create_directory(currentuser_name, currentuser_name, 0)
         #create a new directory for the user in root
         commands.mkdir(currentuser_name, currentuser_name)
-        CURRENT_USER = currentuser_name
+        os.chdir(os.getcwd() + "/" + currentuser_name)
+        file_system(currentuser_name)
      
     else: 
         if db_auth_user(currentuser_name, currentuser_pass):
             print("Sucessful Login!")
-            CURRENT_USER = currentuser_name
-            print("Welcome: "+CURRENT_USER)
+            print("Welcome: "+currentuser_name)
+            file_system(currentuser_name)
         else: 
             print("Invalid Password")
 

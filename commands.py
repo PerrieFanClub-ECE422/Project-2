@@ -4,9 +4,9 @@ ROOT_DIR = "/home/ubuntu/Project-2"
 
 def pwd(): # see current directory
     curdir = os.getcwd()
-    display_dir = curdir.replace(ROOT_DIR, "root/")
+    display_dir = curdir.replace(ROOT_DIR, "root")
     print("Current dir: ", display_dir)
-    return 
+    return display_dir
 
 def ls():
     files = os.listdir('.')
@@ -18,14 +18,15 @@ def cd(directory): # change dir
     os.system("cd" + directory)
     return 
 
-def mkdir(new_dir, owner_name): # make new subdir in current directory
+def mkdir(new_dir, owner_name): # make new subdir in current directory on disk
+    #TODO: call db_create_directory in here?
     current_dir = os.getcwd()
 
     # Create a new directory inside the current directory
     new_dir_path = os.path.join(current_dir, new_dir)
     os.mkdir(new_dir_path)
 
-    print(f"Directory '{new_dir}' created successfully.")
+    print(f"Directory '{new_dir}' created successfully on disk.")
 
     return 
 
