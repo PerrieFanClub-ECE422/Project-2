@@ -11,7 +11,7 @@ db_path = os.getcwd() + "/sfs.db"
 def main():
     print("\nWelcome to the PERRIEFANCLUB SFS :)")
     dbsetup.init_db()  # Initialize the database and tables if they don't exist
-    cmds = "[1]Login \t[2]Register \t[3]Create Group \t[4]Exit"
+    cmds = "\n[1]Login \t[2]Register \t[3]Create Group \t[4]Exit"
     while True:
         print(cmds)
         cmd = input("\n--- SFS$ ").split()
