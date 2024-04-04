@@ -50,6 +50,17 @@ def encrypt_with_public_key(public_key, plaintext):
     )
     return encrypted_data
 
+def serialize_public_key(key):
+    """Serialize a public key."""
+    return key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+)
+
+def deserialize_public_key(serialized_key):
+    """Deserialize a serialized public key."""
+    return serialization.load_pem_public_key(serialized_key, backend=default_backend())
+
 def decrypt_with_private_key(private_key, encrypted_data):
     """
     Decrypt data using a private key.
@@ -71,12 +82,6 @@ def decrypt_with_private_key(private_key, encrypted_data):
     )
     return decrypted_data
 
-def serialize_public_key(key):
-    """Serialize a public key."""
-    return key.public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo
-    )
 
 def serialize_private_key(key):
     """Serialize a private key."""
@@ -86,31 +91,9 @@ def serialize_private_key(key):
         encryption_algorithm=serialization.NoEncryption()
     )
 
-def deserialize_public_key(serialized_key):
-    """Deserialize a serialized public key."""
-    return serialization.load_pem_public_key(serialized_key, backend=default_backend())
-
 def deserialize_private_key(serialized_key):
     """Deserialize a serialized private key."""
     return serialization.load_pem_private_key(serialized_key, password=None, backend=default_backend())
-
-# Function to add serialized key to the dummy user in the database
-def add_key_to_user(serialized_key):
-    conn = sqlite3.connect('sfs.db')
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO users (username, password_hash, group_name, private_key, public_key) VALUES (?, ?, ?, ?, ?)",
-                       ("dummy", "password_hash_here", "group_name_here", None, None))
-    conn.commit()
-    conn.close()
-
-# Function to fetch serialized key from the dummy user in the database
-def fetch_key_from_user():
-    conn = sqlite3.connect('dummy.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT private_key FROM users")
-    serialized_key = cursor.fetchone()[0]
-    conn.close()
-    return serialized_key
 
 # Test case
 def main():
@@ -119,8 +102,8 @@ def main():
         private_key, public_key = generate_key_pair()
         
         # Encrypt data
-        data = b"Hello, world!"
-        encrypted_data = encrypt_with_public_key(public_key, data)
+        data = "Hello, world!"
+        encrypted_data = encrypt_with_public_key(public_key, data.encode())
 
         # Serialize the keys
         serialized_private_key = serialize_private_key(private_key)
@@ -129,10 +112,7 @@ def main():
         # Connect to the database
         conn = sqlite3.connect('sfs.db')  # Change 'your_database.db' to the path of your database file
         cursor = conn.cursor()
-        
-        # Execute the INSERT statement to add the dummy user
-        cursor.execute("INSERT INTO users (username, password_hash, group_name, private_key, public_key) VALUES (?, ?, ?, ?, ?)",
-                       ("dummy", "password_hash_here", "group_name_here", serialized_private_key, serialized_public_key))  # Change password_hash_here and group_name_here as needed
+    
         conn.commit()
         print("Dummy user added successfully.")
 

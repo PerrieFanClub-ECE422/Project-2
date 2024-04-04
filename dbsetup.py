@@ -2,7 +2,7 @@ import sqlite3
 from hashlib import sha256
 import secrets
 import commands
-from utils import deserialize_private_key, deserialize_public_key, encrypt_with_public_key, generate_key_pair, serialize_private_key, serialize_public_key
+from utils import decrypt_with_private_key, deserialize_private_key, deserialize_public_key, encrypt_with_public_key, generate_key_pair, serialize_private_key, serialize_public_key
 import os
 # global vars
 db_path= os.getcwd() + '/sfs.db'
@@ -159,7 +159,23 @@ def db_check_user_exists(username):
     finally:
         conn.close()
 
+def db_encrypt_data(data,username):
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute('SELECT public_key FROM users WHERE username = ?', (username.lower(),))
+    public_key_data = cursor.fetchone()[0]
+    public_key = deserialize_public_key(public_key_data)
+    encrypted_data = encrypt_with_public_key(public_key, data)
+    return encrypted_data
 
+def db_decrypt_data(data, username): 
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute('SELECT private_key FROM users WHERE username = ?', (username.lower(),))
+    private_key_data = cursor.fetchone()[0]
+    private_key = deserialize_public_key(private_key_data)
+    decrypted_data = decrypt_with_private_key(private_key, data)
+    return decrypted_data
 
 def db_get_directory_perms(owner_id, dir_name, dir_path):
     try:
@@ -331,7 +347,7 @@ def get_admin_keys():
 
     finally:
         conn.close()
-        
+
 def db_add_group(group_name):
     private_key, public_key = get_admin_keys()
     if private_key and public_key:
@@ -343,7 +359,7 @@ def db_add_group(group_name):
             encrypted_group_name = encrypt_with_public_key(public_key, group_name.encode('utf-8'))
 
             # Insert the encrypted group name into the groups table
-            cursor.execute('INSERT INTO groups (name) VALUES (?)', (encrypted_group_name,))
+            cursor.execute('INSERT INTO groups (group_name) VALUES (?)', (encrypted_group_name,))
             conn.commit()
             print("Group added successfully.")
             return True

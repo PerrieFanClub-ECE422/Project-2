@@ -61,7 +61,7 @@ def register():
 
 
 def create_group_prompt():
-    group_name = getpass.getpass("Enter group name: ")
+    group_name = input("Enter group name: ")
     try:
         dbsetup.db_add_group(group_name)
     except sqlite3.IntegrityError:
