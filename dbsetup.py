@@ -1,11 +1,12 @@
 import sqlite3
 from hashlib import sha256
 import secrets
-
+import commands
 from utils import deserialize_key, generate_key_pair, serialize_key
 
 # global vars
 db_path='sfs.db'
+ROOT_PARENT_ID = 0
 
 def init_db():
 
@@ -65,6 +66,7 @@ def init_db():
     )
 
     # directory table
+    #cursor.execute("DROP TABLE IF EXISTS directories")
     cursor.execute(
         '''
         CREATE TABLE IF NOT EXISTS directories (
@@ -72,12 +74,27 @@ def init_db():
             dir_name TEXT NOT NULL,
             parent_dir_id INTEGER,
             owner_id INTEGER NOT NULL,
+            permissions TEXT NOT NULL,
             FOREIGN KEY (parent_dir_id) REFERENCES directories (dir_id),
             FOREIGN KEY (owner_id) REFERENCES users (user_id)
         )
         '''
     )
+    #populate directory table with root directory
+    cursor.execute(
+        '''
+        INSERT INTO directories (
+            dir_name, 
+            parent_dir_id, 
+            owner_id,
+            permissions
+            ) 
+            VALUES (?, ?, ?,?)
+        ''', 
+        ("root", 0, 0, "all")
+    )
 
+    #cursor.execute("DROP TABLE IF EXISTS files")
     # files table
     cursor.execute(
         '''
@@ -88,7 +105,7 @@ def init_db():
             owner_id INTEGER NOT NULL,
             dir_id INTEGER NOT NULL,
             permissions TEXT NOT NULL,
-            is_selected INTEGER NOT NULL,
+            content TEXT,
             FOREIGN KEY (owner_id) REFERENCES users (user_id),
             FOREIGN KEY (dir_id) REFERENCES directories (dir_id)
         )
@@ -221,9 +238,9 @@ def db_get_user_id(username):
 
         cursor.execute(
             '''
-            SELECT * 
+            SELECT user_id 
             FROM users 
-            WHERE user_id=?
+            WHERE username=?
             ''', 
             (username,)
         )
@@ -237,7 +254,7 @@ def db_get_user_id(username):
     finally:
         conn.close()
 
-    return user
+    return user[0]
 
 
 def db_get_all_users():
@@ -401,12 +418,89 @@ def db_get_session_user_id(token):
 
 
 
-def create_directory(dir_name):
-    print("create dir here")
+def db_create_directory(dir_name, owner_name, parent_dir_id):
 
+    owner_id = db_get_user_id(owner_name)
+    print(owner_id)
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM directories WHERE dir_name = ? AND parent_dir_id = ?", (dir_name, parent_dir_id))
+        result = cursor.fetchone()
+        if result is not None:
+            print("Directory already exists")
+            return  # Entry exists
+        else:
+            #TODO: possibly make sure that owner_id is referencing the tables correctly
+            cursor.execute(
+                '''INSERT INTO directories (
+                    dir_name, 
+                    parent_dir_id,
+                    owner_id,
+                    permissions
+                    )
+                    VALUES (?, ?, ?, ?)
+                    ''', 
+                    (dir_name, parent_dir_id, owner_id, "user")
+                )
 
-def db_create_file(file_name):
+            conn.commit()
+            print(f"Directory {dir_name} added to db for {owner_name}")
+            # populate files database with name, hashed name, owner id, permission type, content = empty for now
+    except sqlite3.Error as e:
+        print("SQLite error:", e)
+        return None
+
+    finally:
+        conn.close()
+
+def db_get_directory_id(dir_name, parent_dir_id):
+    #TODO: encrypt/decrypt values
+
+    # use directory name and parent directory ID
+    # if parent_dir_id == 0, we are in root directory
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    try:
+        # Execute the query to fetch the dir_id
+        cursor.execute("SELECT dir_id FROM directories WHERE dir_name = ? AND parent_dir_id = ?", (dir_name, parent_dir_id))
+        result = cursor.fetchone()
+
+        if result:
+            return result[0]  # Return the dir_id value
+        else:
+            return None
+
+    except sqlite3.Error as e:
+        print("SQLite error:", e)
+        return None
+
+def db_create_file(file_name, owner_name):
     print("create file here")
+    #TODO: encrypt info in function caller, decrypt info here
+
+    owner_id = db_get_user_id(owner_name)
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    #TODO: possibly make sure that owner_id is referencing the tables correctly
+    cursor.execute(
+        '''INSERT INTO files (
+            real_name, 
+            encrypted_name, 
+            owner_id, 
+            dir_id
+            permissions, 
+            content) 
+            VALUES (?, ?, ?, ?, ?)
+            ''', 
+            (file_name, "hashed_file_name", owner_id, 0 ,"user", "filler content")
+        )
+
+    print(f"File {file_name} added to db for {owner_name}")
+    # populate files database with name, hashed name, owner id, permission type, content = empty for now
 
 def get_private_key(username):
     conn = sqlite3.connect(db_path)
@@ -445,8 +539,7 @@ if __name__ == '__main__':
     if yorn.lower() == 'y':
         uu = input("u: ")
         pp = input("p: ")
-        group = input("group: ")
-        db_add_user(uu, pp, group)
+        db_add_user(uu, pp)
 
 
     for usern in db_get_all_users():

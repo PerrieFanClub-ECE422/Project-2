@@ -1,36 +1,11 @@
 import commands
-from dbsetup import db_add_user, db_auth_user, db_check_user_exists, get_private_key, get_public_key
+from dbsetup import db_add_user, db_auth_user, db_check_user_exists, get_private_key, get_public_key, db_create_directory
 
 PERMISSION_USER = "user"
 PERMISSION_GROUP = "group"
 PERMISSION_ALL = "all"
 CURRENT_USER = ""
 
-
-
-class User:
-    # user is saved to database
-    def __init__(self, name):
-        self.name = name
-        self.home_dir = create_dir(name)         # user should also have their own directory created
-
-class File:
-    # user is saved to database
-    def __init__(self, name, owner):
-        # query database to find # of files in db, then set unique ID to the next file number
-        #self.id = <query>
-        self.name = name
-        self.owner = owner
-
-def create_user(name):
-    user = User(name)
-    # do some database stuff
-    return user
-
-def create_dir(name, owner):
-    dir = Directory(name, owner)
-    # do some database stuff
-    return dir
 
 def main():
     while True:
@@ -44,6 +19,10 @@ def main():
             commands.pwd()
         elif cmd[0] == "login":
             login()
+        elif cmd[0] == "mkdir":
+            commands.mkdir(cmd[1])
+        elif cmd[0] == "touch":
+            commands.touch(cmd[1])
         else:
             print("Command not recognized. Type 'cmds' to list all commands.")
     """
@@ -65,8 +44,6 @@ def main():
 
     """
 
-def get_directory_id():
-    return
 
 def select_file(filename, dir_id):
     """
@@ -90,7 +67,7 @@ def check_file_perms(filename):
         - if CURRENT USER == "", NO PERMISSION
     
     - Get ID of CURRENT_USER from DB by querying for username
-    - Get ID of 'filename' from DB by querying for "is_selected"
+    - Get ID of 'filename' from DB by querying for the current directory id
 
     - Check permission column of file.
         - If "all", grant permission. Else, go next
@@ -103,6 +80,8 @@ def check_file_perms(filename):
         - If match, grant permisseion. Else, NO PERMISSION.
 
     """
+
+
 
 def check_directory_perms(dir_id):
     return
@@ -120,12 +99,13 @@ def login():
     currentuser_pass = input("Pass: ")
 
     if new_user: 
-        try:
-            db_add_user(currentuser_name,currentuser_pass)
-            CURRENT_USER = currentuser_name
-        except:
-            print("error with uploading user to DB")
-        
+        db_add_user(currentuser_name,currentuser_pass)
+        #create a new directory for the user in database
+        db_create_directory(currentuser_name, currentuser_name, 0)
+        #create a new directory for the user in root
+        commands.mkdir(currentuser_name)
+        CURRENT_USER = currentuser_name
+     
     else: 
         if db_auth_user(currentuser_name, currentuser_pass):
             print("Sucessful Login!")
