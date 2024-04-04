@@ -1,5 +1,5 @@
 import commands
-from dbsetup import db_add_user, db_auth_user, db_check_user_exists, get_private_key, get_public_key, db_create_directory, db_get_user_id, db_get_directory_id, db_get_directory_perms
+from dbsetup import db_add_user, db_auth_user, db_check_user_exists, get_private_key, get_public_key, db_create_directory, db_get_user_id, db_get_directory_id, db_get_directory_perms, db_get_directory_owner, db_create_directory
 import sqlite3
 import os
 PERMISSION_USER = "user"
@@ -27,10 +27,18 @@ def file_system(current_user_name):
         elif cmd[0] == "pwd":
             commands.pwd()
         elif cmd[0] == "mkdir":
-            if check_directory_perms(current_user_name):
+            dir_path = commands.pwd() # get current path
+            dir_name = os.path.basename(dir_path) # name of current directory
+            print(f"{dir_path}, {dir_name}")
+            if check_directory_perms(current_user_name, dir_name, dir_path):
                 commands.mkdir(cmd[1], current_user_name)
         elif cmd[0] == "touch":
             commands.touch(cmd[1], current_user_name)
+        elif cmd[0] == "cd":
+            dir_path = commands.pwd() + "/" + cmd[1]
+            print(f"{cmd[1]}, {dir_path}")
+            if check_directory_perms(current_user_name, cmd[1], dir_path):
+                commands.cd(os.getcwd() + "/" + cmd[1])
         else:
             print("Command not recognized. Type 'cmds' to list all commands.")
     """
@@ -89,7 +97,12 @@ def check_file_perms(filename):
 
     """
 
-def check_directory_perms(curruser, dir_id):
+def check_directory_perms(curruser, dir_name, dir_path):
+    """
+    Args:
+    dir_name: name of the folder(directory) that you wish to check perms for
+    dir_path: unique path of the folder(directory) that you wish to check perms for
+    """
     #TODO: figure out how we plan on adding info to user_file_permissions and user_directory_permissions
     #TODO: figre out how to get ID of current directory and selected file
 
@@ -101,13 +114,19 @@ def check_directory_perms(curruser, dir_id):
         return False
     else:
         owner_id = db_get_user_id(curruser)
-        dir_path = commands.pwd()
-        dir_name = os.path.basename(dir_path)
         dir_perms = db_get_directory_perms(owner_id, dir_name, dir_path)
+        dir_owner_id = db_get_directory_owner(dir_name, dir_path)
         print(f"{owner_id}, {dir_path}, {dir_name}")
         
+        if dir_perms[0] == "all":
+            return True
+        elif dir_perms[0] == "user":
+            if owner_id == dir_owner_id:
+                return True
+            else:
+                return False
 
-       
+
 
     return True
 
@@ -131,8 +150,6 @@ def login():
 
     if new_user: 
         db_add_user(currentuser_name,currentuser_pass)
-        #create a new directory for the user in database
-        db_create_directory(currentuser_name, currentuser_name, 0)
         #create a new directory for the user in root
         commands.mkdir(currentuser_name, currentuser_name)
         os.chdir(os.getcwd() + "/" + currentuser_name)

@@ -1,5 +1,5 @@
 import os
-
+import dbsetup
 ROOT_DIR = "/home/ubuntu/Project-2"
 
 def pwd(): # see current directory
@@ -15,7 +15,9 @@ def ls():
 
 
 def cd(directory): # change dir
-    os.system("cd" + directory)
+    os.chdir(directory)
+    print("Now in ", os.getcwd())
+
     return 
 
 def mkdir(new_dir, owner_name): # make new subdir in current directory on disk
@@ -25,7 +27,8 @@ def mkdir(new_dir, owner_name): # make new subdir in current directory on disk
     # Create a new directory inside the current directory
     new_dir_path = os.path.join(current_dir, new_dir)
     os.mkdir(new_dir_path)
-
+    #create a new directory for the user in database
+    dbsetup.db_create_directory(new_dir, owner_name)
     print(f"Directory '{new_dir}' created successfully on disk.")
 
     return 

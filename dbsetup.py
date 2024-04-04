@@ -288,7 +288,7 @@ def db_get_directory_id(dir_name, dir_path):
         print(f"Database error: {e}")
 
 
-def db_get_directory_owner(username, dir_name, dir_path):
+def db_get_directory_owner(dir_name, dir_path):
 
     try:
         conn = sqlite3.connect(db_path)
@@ -512,7 +512,7 @@ def db_get_session_user_id(token):
 
 
 
-def db_create_directory(dir_name, owner_name, parent_dir_id):
+def db_create_directory(dir_name, owner_name):
 
     owner_id = db_get_user_id(owner_name)
     print(owner_id)
@@ -522,7 +522,7 @@ def db_create_directory(dir_name, owner_name, parent_dir_id):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT * FROM directories WHERE dir_name = ? AND parent_dir_id = ?", (dir_name, parent_dir_id))
+        cursor.execute("SELECT * FROM directories WHERE dir_name = ? AND dir_path = ?", (dir_name, new_dir_path))
         result = cursor.fetchone()
         if result is not None:
             print("Directory already exists")
@@ -540,7 +540,7 @@ def db_create_directory(dir_name, owner_name, parent_dir_id):
                     )
                     VALUES (?, ?, ?, ?,?,?)
                     ''', 
-                    (dir_name, "encrypted_dir_name",parent_dir_id, owner_id, new_dir_path, "user")
+                    (dir_name, "encrypted_dir_name",0, owner_id, new_dir_path, "user")
                 )
 
             conn.commit()
