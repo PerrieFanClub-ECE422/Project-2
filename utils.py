@@ -1,10 +1,13 @@
 import os
+import sqlite3
 from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
+
+from dbsetup import get_admin_keys
 
 def run_linux_command(command):
     # Execute the command
@@ -26,7 +29,7 @@ def generate_key_pair(key_size=2048):
         backend=default_backend()
     )
     public_key = private_key.public_key()
-    return public_key, private_key
+    return private_key, public_key
 
 def encrypt_with_public_key(public_key, plaintext):
     """
@@ -70,23 +73,6 @@ def decrypt_with_private_key(private_key, encrypted_data):
     )
     return decrypted_data
 
-# def validate_user(username_asking, username_key):
-#     if not db_check_user_exists(username_asking):
-#         return -1
-#     #check permissions for username_asking TODO
-    
-#     return get_public_key(username_key), get_private_key(username_key)
-
-
-def serialize_key(key):
-    """Serialize a public or private key."""
-    if isinstance(key, rsa.RSAPublicKey):
-        return serialize_public_key(key)
-    elif isinstance(key, rsa.RSAPrivateKey):
-        return serialize_private_key(key)
-    else:
-        raise ValueError("Unsupported key type")
-
 def serialize_public_key(key):
     """Serialize a public key."""
     return key.public_bytes(
@@ -102,14 +88,72 @@ def serialize_private_key(key):
         encryption_algorithm=serialization.NoEncryption()
     )
 
+def deserialize_public_key(serialized_key):
+    """Deserialize a serialized public key."""
+    return serialization.load_pem_public_key(serialized_key, backend=default_backend())
 
-def deserialize_key(serialized_key):
-    """Deserialize a serialized key."""
-    # Determine the key type based on the serialized key data
-    key_type = serialization.load_pem_private_key if b"PRIVATE" in serialized_key else serialization.load_pem_public_key
+def deserialize_private_key(serialized_key):
+    """Deserialize a serialized private key."""
+    return serialization.load_pem_private_key(serialized_key, password=None, backend=default_backend())
 
-    # Deserialize the key using the appropriate function
-    return key_type(
-        serialized_key,
-        password=None  # Assuming no password protection for keys
-    )
+# Function to add serialized key to the dummy user in the database
+def add_key_to_user(serialized_key):
+    conn = sqlite3.connect('sfs.db')
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO users (username, password_hash, group_name, private_key, public_key) VALUES (?, ?, ?, ?, ?)",
+                       ("dummy", "password_hash_here", "group_name_here", None, None))
+    conn.commit()
+    conn.close()
+
+# Function to fetch serialized key from the dummy user in the database
+def fetch_key_from_user():
+    conn = sqlite3.connect('dummy.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT private_key FROM users")
+    serialized_key = cursor.fetchone()[0]
+    conn.close()
+    return serialized_key
+
+# Test case
+def main():
+    try:
+        # Generate RSA key pair
+        private_key, public_key = generate_key_pair()
+        
+        # Encrypt data
+        data = b"Hello, world!"
+        encrypted_data = encrypt_with_public_key(public_key, data)
+
+        # Serialize the keys
+        serialized_private_key = serialize_private_key(private_key)
+        serialized_public_key = serialize_public_key(public_key)
+
+        # Connect to the database
+        conn = sqlite3.connect('sfs.db')  # Change 'your_database.db' to the path of your database file
+        cursor = conn.cursor()
+        
+        # Execute the INSERT statement to add the dummy user
+        cursor.execute("INSERT INTO users (username, password_hash, group_name, private_key, public_key) VALUES (?, ?, ?, ?, ?)",
+                       ("dummy", "password_hash_here", "group_name_here", serialized_private_key, serialized_public_key))  # Change password_hash_here and group_name_here as needed
+        conn.commit()
+        print("Dummy user added successfully.")
+
+        # Fetch serialized private key from database
+        cursor.execute("SELECT private_key FROM users WHERE username = 'dummy'")
+        serialized_private_key = cursor.fetchone()[0]
+
+        # Deserialize private key
+        private_key = serialization.load_pem_private_key(serialized_private_key, password=None, backend=default_backend())
+
+        # Decrypt data using deserialized private key
+        decrypted_data = decrypt_with_private_key(private_key, encrypted_data)
+
+        print("Original Data:", data)
+        print("Decrypted Data:", decrypted_data.decode())
+        
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+    finally:
+        conn.close()
+if __name__ == "__main__":
+    main()
