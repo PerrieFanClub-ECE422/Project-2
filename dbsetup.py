@@ -92,7 +92,7 @@ def init_db():
         os.mkdir(new_dir_path)
     os.chdir(new_dir_path)
 
-    #cursor.execute("DROP TABLE IF EXISTS files")
+    cursor.execute("DROP TABLE IF EXISTS files")
     # files table
     cursor.execute(
         '''
@@ -101,11 +101,10 @@ def init_db():
             real_name TEXT NOT NULL,
             encrypted_name TEXT,
             owner_id INTEGER NOT NULL,
-            dir_id INTEGER NOT NULL,
+            dir_path TEXT NOT NULL,
             permissions TEXT NOT NULL,
             content TEXT,
-            FOREIGN KEY (owner_id) REFERENCES users (user_id),
-            FOREIGN KEY (dir_id) REFERENCES directories (dir_id)
+            FOREIGN KEY (owner_id) REFERENCES users (user_id)
         )
         '''
     )
@@ -595,25 +594,37 @@ def db_create_file(file_name, owner_name):
     #TODO: encrypt info in function caller, decrypt info here
 
     owner_id = db_get_user_id(owner_name)
-
+    new_file_path = commands.pwd() + "/" + file_name
+    print(db_path)
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    #TODO: possibly make sure that owner_id is referencing the tables correctly
-    cursor.execute(
-        '''INSERT INTO files (
-            real_name, 
-            encrypted_name, 
-            owner_id, 
-            dir_id
-            permissions, 
-            content) 
-            VALUES (?, ?, ?, ?, ?)
-            ''', 
-            (file_name, "hashed_file_name", owner_id, 0 ,"user", "filler content")
-        )
+    try:
+        #TODO: possibly make sure that owner_id is referencing the tables correctly
+        cursor.execute(
+            '''INSERT INTO files (
+                real_name, 
+                encrypted_name, 
+                owner_id, 
+                dir_path,
+                permissions, 
+                content) 
+                VALUES (?, ?, ?, ?, ?, ?)
+                ''', 
+                (file_name, "hashed_file_name", owner_id, new_file_path,"user", "filler content")
+            )
 
-    print(f"File {file_name} added to db for {owner_name}")
+        
+        print(f"File {file_name} added to db for {owner_name}")
+
+        conn.commit()
+    except sqlite3.Error as e:
+        print("SQLite error:", e)
+        return None
+
+
+    finally:
+        conn.close()
     # populate files database with name, hashed name, owner id, permission type, content = empty for now
 
 def get_private_key(username):

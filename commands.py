@@ -41,6 +41,7 @@ def touch(file_name, owner_name): # create a new file (txt)
             with open(file_name, 'w'):
                 pass
             
+            dbsetup.db_create_file(file_name, owner_name)
             print(f"File '{file_name}' created successfully.")
         else:
             # If it exists, update its access and modification timestamps
