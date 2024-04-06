@@ -645,6 +645,38 @@ def db_get_directory_id(dir_name, parent_dir_id):
         print("SQLite error:", e)
         return None
 
+def change_directory_permissions(dir_name, group_ids):
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Fetch directory ID based on directory name
+        cursor.execute("SELECT dir_id FROM directories WHERE dir_name = ?", (dir_name,))
+        dir_id = cursor.fetchone()
+        
+        if dir_id:            
+            # Convert group IDs to a string to store as permissions
+            permissions = ','.join(str(group_id) for group_id in group_ids)
+            
+            # Update permissions for the directory
+            cursor.execute("UPDATE directories SET permissions = ? WHERE dir_id = ?", (permissions, dir_id))
+            
+            conn.commit()
+            print("Directory permissions updated successfully.")
+        else:
+            print("Directory not found.")
+
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+
+    finally:
+        conn.close()
+
+# Example usage:
+# Change permissions for a directory named "my_directory" to "read" and grant access to groups with IDs 1, 2, and 3
+change_directory_permissions("my_directory", "read", [1, 2, 3])
+
+
 def db_create_file(file_name, owner_name):
     #TODO: encrypt info in function caller, decrypt info here
 
