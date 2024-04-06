@@ -21,7 +21,6 @@ def cd(directory): # change dir
     return 
 
 def mkdir(new_dir, owner_name): # make new subdir in current directory on disk
-    #TODO: call db_create_directory in here?
     current_dir = os.getcwd()
 
     # Create a new directory inside the current directory
@@ -34,18 +33,19 @@ def mkdir(new_dir, owner_name): # make new subdir in current directory on disk
     return 
 
 def touch(file_name, owner_name): # create a new file (txt)
+    #TODO: CHECK IF USER HAS DIRECTORY PERMS
     try:
         # Check if the file already exists
         if not os.path.exists(file_name):
-            # If it doesn't exist, create an empty file
+            # If it doesn't exist, create file
             with open(file_name, 'w'):
                 pass
             
             dbsetup.db_create_file(file_name, owner_name)
             print(f"File '{file_name}' created successfully.")
         else:
-            # If it exists, update its access and modification timestamps
             print(f"File '{file_name}' already exists!")
+
     except Exception as e:
         print("Error:", e)
 

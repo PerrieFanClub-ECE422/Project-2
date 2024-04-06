@@ -121,41 +121,26 @@ def file_system(current_user_name):
     """
 
 
-def select_file(filename, dir_id):
-    """
-    Set is_selected for 'filename' to 1
 
+def check_file_perms(curruser, file_name, file_path):
 
-    Since unix doesnt allow for same file names within the same directory, we should follow that
+    if curruser == "":
+        print(f"{curruser}:No permission to access directory")
+        return False
+    else:
+        owner_id = dbsetup.db_get_user_id(curruser)
+        file_perms = dbsetup.db_get_file_perms(owner_id, file_name, file_path)
+        file_owner_id = dbsetup.db_get_file_owner(file_name, file_path)
+        print(f"{owner_id}, {file_name}, {file_path}")
 
-    When any command that deals with files (ls, touch, cat, echo, mv, chmod) is used,
-    we run get_directory_id() which returns the directory ID
-    Then we query the file DB for 'filename' with 'dir_id', and set "is_selected" for this row to 1
+        if file_perms[0] == "all":
+            return True
+        elif file_perms[0] == "user":
+            if owner_id == file_owner_id:
+                return True
+            else:
+                return False
 
-
-
-    """
-
-
-def check_file_perms(filename):
-    """
-    - Check if user is logged in via CURRENT_USER value
-        - if CURRENT USER == "", NO PERMISSION
-    
-    - Get ID of CURRENT_USER from DB by querying for username
-    - Get ID of 'filename' from DB by querying for the current directory id
-
-    - Check permission column of file.
-        - If "all", grant permission. Else, go next
-    - Get file owner_id from file ID row
-    - Compare CURRENT_USER ID to file owner_id
-        - If match, grant permission. Else, go next
-    - Check user_file_permissions DB. Query for file_id. It will return a different row
-    for each permitted group
-    - Compare CURRENT_USER's groups with permitted groups. 
-        - If match, grant permisseion. Else, NO PERMISSION.
-
-    """
 
 def check_directory_perms(curruser, dir_name, dir_path):
     """
@@ -165,9 +150,6 @@ def check_directory_perms(curruser, dir_name, dir_path):
     """
     #TODO: figure out how we plan on adding info to user_file_permissions and user_directory_permissions
     #TODO: figre out how to get ID of current directory and selected file
-
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
 
     if curruser == "":
         print(f"{curruser}:No permission to access directory")
