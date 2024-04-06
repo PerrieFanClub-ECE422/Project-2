@@ -104,11 +104,10 @@ def file_system(current_user_name):
             print("invalid cmd")
         
         elif cmd[0] == "cd": # ----------------------------------------------- cd
-            if len(cmd) > 1 and check_directory_perms(current_user_name, cmd[1], os.path.join(commands.pwd(), cmd[1])):
-                commands.cd(os.path.join(commands.pwd(), cmd[1]))
-                current_dir_name = os.path.basename(commands.pwd())  # update the current directory name
-            else:
-                print("Error: Directory not found or no permission.")
+            dir_path = os.path.join(commands.pwd(), cmd[1])
+            print(f"{cmd[1]}, {dir_path}")
+            if check_directory_perms(current_user_name, cmd[1], dir_path):
+                commands.cd(os.path.join(os.getcwd(), cmd[1]))
         
         elif cmd[0] == "pwd": # ----------------------------------------------- pwd
             commands.pwd()
