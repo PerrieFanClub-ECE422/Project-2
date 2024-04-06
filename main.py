@@ -90,7 +90,7 @@ def file_system(current_user_name):
     cat       => read file contents     >> cat    [filename]
     echo      => write file contents    >> echo   [filename]  [contents]
     mv        => rename file            >> mv     [filename]  [name]
-    chmod     => change permissions of file/dir >> chmod [-f, -d] [filename]
+    chmod     => change permissions of file/dir >> chmod [-f, -d] [targetname]
     cmds      => show all cmds          >> cmds
     exit      => exit the file system   >> exit
     """
@@ -103,13 +103,19 @@ def file_system(current_user_name):
             print("invalid cmd")
         
         elif cmd[0] == "cd": # ----------------------------------------------- cd
-            dir_path = os.path.join(commands.pwd(), cmd[1])
-            print(f"{cmd[1]}, {dir_path}")
-            if check_directory_perms(current_user_name, cmd[1], dir_path):
-                commands.cd(os.path.join(os.getcwd(), cmd[1]))
-        
+            if len(cmd) < 2:
+                print("insufficient args")
+            else:
+                if cmd[1] == "..":
+                    curdir = os.getcwd()
+                    parentdir = os.path.dirname(curdir)
+                    os.chdir(parentdir)
+
+                else:   
+                    commands.cd(os.path.join(os.getcwd(), cmd[1]), current_user_name, cmd[1])
+
         elif cmd[0] == "pwd": # ----------------------------------------------- pwd
-            commands.pwd()
+            print("Current Directory: ",commands.pwd())
         
         elif cmd[0] == "ls": # ----------------------------------------------- ls
             if len(cmd) > 1:
@@ -151,7 +157,8 @@ def file_system(current_user_name):
                 commands.mv(cmd[1], cmd[2])
 
         elif cmd[0] == "chmod": # ----------------------------------------------- chmod
-            print("chmod")
+            if len(cmd) < 3:
+                print("please specify flag and target name")
         
         elif cmd[0] == "cmds": # ----------------------------------------------- cmds
             print(cmds)
@@ -190,7 +197,6 @@ def check_file_perms(curruser, file_name, file_path):
         owner_id = dbsetup.db_get_user_id(curruser)
         file_perms = dbsetup.db_get_file_perms(owner_id, file_name, file_path)
         file_owner_id = dbsetup.db_get_file_owner(file_name, file_path)
-        print(f"{owner_id}, {file_name}, {file_path}")
 
         if file_perms == None:
             print(f"No access to file {file_name}")
@@ -220,7 +226,6 @@ def check_directory_perms(curruser, dir_name, dir_path):
         owner_id = dbsetup.db_get_user_id(curruser)
         dir_perms = dbsetup.db_get_directory_perms(owner_id, dir_name, dir_path)
         dir_owner_id = dbsetup.db_get_directory_owner(dir_name, dir_path)
-        print(f"{owner_id}, {dir_path}, {dir_name}")
         
         if dir_perms == None:
             print(f"No access to directory {dir_name}")

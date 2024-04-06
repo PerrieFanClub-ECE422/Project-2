@@ -199,10 +199,9 @@ def db_get_directory_perms(owner_id, dir_name, dir_path):
         dir_perms = cursor.fetchone()
 
         if dir_perms:
-            print("Directory perms found! ", dir_perms)
             return dir_perms
         else:
-            print("No dir perms found, ", dir_perms)
+            print("No dir perms found")
             return None
 
     except sqlite3.Error as e:

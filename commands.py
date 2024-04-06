@@ -1,12 +1,11 @@
 import os
 import dbsetup
+import main
 ROOT_DIR = "/home/ubuntu/Project-2/root"
 
 def pwd(): # see current directory
     curdir = os.getcwd()
-    display_dir = curdir.replace(ROOT_DIR, "root")
-    print("Current dir: ", display_dir)
-    return display_dir
+    return curdir
 
 
 
@@ -44,9 +43,12 @@ def ls(dir_path='.'):
         print(f"Error: {e}")
 
 
-def cd(directory): # change dir
-    os.chdir(directory)
-    print("Now in ", os.getcwd())
+def cd(directory, current_user_name, dir_name): # change dir
+    dir_path = os.path.join(pwd(), dir_name)
+    if main.check_directory_perms(current_user_name, dir_name, dir_path):
+        os.chdir(directory)
+    else:
+        print(f"No access to directory {dir_name}")
 
     return 
 
