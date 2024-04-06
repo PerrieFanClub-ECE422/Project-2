@@ -585,9 +585,7 @@ def db_get_session_user_id(token):
 def db_create_directory(dir_name, owner_name):
 
     owner_id = db_get_user_id(owner_name)
-    print(owner_id)
     new_dir_path = os.path.join(commands.pwd(), dir_name)
-    print("New dir path: ", new_dir_path)
 
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -614,7 +612,7 @@ def db_create_directory(dir_name, owner_name):
                 )
 
             conn.commit()
-            print(f"Directory {dir_name} added to db for {owner_name}")
+            print(f"Directory {dir_name} created by {owner_name}")
             # populate files database with name, hashed name, owner id, permission type, content = empty for now
 
     except sqlite3.Error as e:
@@ -672,7 +670,7 @@ def db_create_file(file_name, owner_name):
             )
 
         
-        print(f"File {file_name} added to db for {owner_name}")
+        print(f"File {file_name} created by {owner_name}")
 
         conn.commit()
     except sqlite3.Error as e:

@@ -89,6 +89,7 @@ def file_system(current_user_name):
     mkdir     => create new directory   >> mkdir  [direcname]
     cat       => read file contents     >> cat    [filename]
     echo      => write file contents    >> echo   [filename]  [contents]
+    mv        => rename file            >> mv     [filename]  [name]
     cmds      => show all cmds          >> cmds
     exit      => exit the file system   >> exit
     """
@@ -133,6 +134,12 @@ def file_system(current_user_name):
                 print("please specify both a file name and contents to write")
             else:
                 commands.echo(cmd[1], cmd[2])
+        
+        elif cmd[0] == "mv": # ----------------------------------------------- mv
+            if len(cmd) < 3:
+                print("please specify both a file name and your desired new file name")
+            else:
+                commands.mv(cmd[1], cmd[2])
 
         elif cmd[0] == "cmds": # ----------------------------------------------- cmds
             print(cmds)

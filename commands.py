@@ -28,7 +28,6 @@ def mkdir(new_dir, owner_name): # make new subdir in current directory on disk
     os.mkdir(new_dir_path)
     #create a new directory for the user in database
     dbsetup.db_create_directory(new_dir, owner_name)
-    print(f"Directory '{new_dir}' created successfully on disk.")
 
     return 
 
@@ -73,6 +72,16 @@ def echo(file_name, content): #write to a file
     except Exception as e:
         print(f"Error: {e}")
 
-def mv(): #rename a file
-    return 
 
+def mv(file_name, new_name): #rename a file
+    try:
+
+        # Check if the new file name exists to avoid accidental overwriting
+        if not os.path.exists(new_name):
+            # If it doesn't exist, rename file
+            os.rename(file_name, new_name)
+            print(f"File '{file_name}' renamed to '{new_name}'")
+    except FileNotFoundError:
+        print(f"Error: '{file_name}' does not exist.")
+    except Exception as e:
+        print(f"Error: {e}")
