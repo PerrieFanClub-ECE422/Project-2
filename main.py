@@ -90,6 +90,7 @@ def file_system(current_user_name):
     cat       => read file contents     >> cat    [filename]
     echo      => write file contents    >> echo   [filename]  [contents]
     mv        => rename file            >> mv     [filename]  [name]
+    chmod     => change permissions of file/dir >> chmod [-f, -d] [filename]
     cmds      => show all cmds          >> cmds
     exit      => exit the file system   >> exit
     """
@@ -151,9 +152,11 @@ def file_system(current_user_name):
             else:
                 commands.mv(cmd[1], cmd[2])
 
+        elif cmd[0] == "chmod":
+
         elif cmd[0] == "cmds": # ----------------------------------------------- cmds
             print(cmds)
-
+        
         elif cmd[0] == "exit": # ----------------------------------------------- exit
             break
         
@@ -179,7 +182,6 @@ def file_system(current_user_name):
     """
 
 
-
 def check_file_perms(curruser, file_name, file_path):
 
     if curruser == "":
@@ -195,13 +197,12 @@ def check_file_perms(curruser, file_name, file_path):
             print(f"No access to file {file_name}")
             return False
         else:
-            if file_perms[0] == "all":
+            if owner_id == file_owner_id:
                 return True
-            elif file_perms[0] == "user":
-                if owner_id == file_owner_id:
-                    return True
-                else:
-                    return False
+            elif file_perms[0] == "all":
+                return True
+            else:
+                return False
 
 
 def check_directory_perms(curruser, dir_name, dir_path):
@@ -226,13 +227,12 @@ def check_directory_perms(curruser, dir_name, dir_path):
             print(f"No access to directory {dir_name}")
             return False
         else:
+            if owner_id == dir_owner_id:
+                return True
             if dir_perms[0] == "all":
                 return True
-            elif dir_perms[0] == "user":
-                if owner_id == dir_owner_id:
-                    return True
-                else:
-                    return False
+            else:
+                return False
 
 
 

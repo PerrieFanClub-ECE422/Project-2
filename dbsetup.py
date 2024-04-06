@@ -608,7 +608,7 @@ def db_create_directory(dir_name, owner_name):
                     )
                     VALUES (?, ?, ?, ?,?,?)
                     ''', 
-                    (dir_name, "encrypted_dir_name",0, owner_id, new_dir_path, "user")
+                    (dir_name, "encrypted_dir_name",0, owner_id, new_dir_path, None)
                 )
 
             conn.commit()
@@ -672,11 +672,6 @@ def change_directory_permissions(dir_name, group_ids):
     finally:
         conn.close()
 
-# Example usage:
-# Change permissions for a directory named "my_directory" to "read" and grant access to groups with IDs 1, 2, and 3
-change_directory_permissions("my_directory", "read", [1, 2, 3])
-
-
 def db_create_file(file_name, owner_name):
     #TODO: encrypt info in function caller, decrypt info here
 
@@ -698,7 +693,7 @@ def db_create_file(file_name, owner_name):
                 content) 
                 VALUES (?, ?, ?, ?, ?, ?)
                 ''', 
-                (file_name, "hashed_file_name", owner_id, new_file_path,"user", "filler content")
+                (file_name, "hashed_file_name", owner_id, new_file_path,None, "filler content")
             )
 
         
