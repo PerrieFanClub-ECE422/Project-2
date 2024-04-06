@@ -608,7 +608,7 @@ def db_create_directory(dir_name, owner_name):
                     )
                     VALUES (?, ?, ?, ?,?,?)
                     ''', 
-                    (dir_name, "encrypted_dir_name",0, owner_id, new_dir_path, "user")
+                    (dir_name, "encrypted_dir_name",0, owner_id, new_dir_path, None)
                 )
 
             conn.commit()
@@ -693,7 +693,7 @@ def db_create_file(file_name, owner_name):
                 content) 
                 VALUES (?, ?, ?, ?, ?, ?)
                 ''', 
-                (file_name, "hashed_file_name", owner_id, new_file_path,"user", "filler content")
+                (file_name, "hashed_file_name", owner_id, new_file_path,None, "filler content")
             )
 
         

@@ -85,3 +85,6 @@ def mv(file_name, new_name): #rename a file
         print(f"Error: '{file_name}' does not exist.")
     except Exception as e:
         print(f"Error: {e}")
+
+def chmod(flag, mode, file_name):
+    
