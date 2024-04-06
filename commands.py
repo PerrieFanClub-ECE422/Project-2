@@ -8,6 +8,22 @@ def pwd(): # see current directory
     print("Current dir: ", display_dir)
     return display_dir
 
+
+
+ROOT_DIR_SHORT = os.path.dirname(os.path.abspath(__file__))
+def pwd_short():
+    curdirshort = os.getcwd()
+    # Make the path relative to ROOT_DIR_SHORT if within it
+    if curdirshort.startswith(ROOT_DIR_SHORT):
+        display_dir_short = curdirshort.replace(ROOT_DIR_SHORT, "").lstrip(os.sep)
+        display_dir_short = os.sep + display_dir_short if display_dir_short else "root"
+    else:
+        # Fallback in case the current dir is outside ROOT_DIR_SHORT
+        display_dir_short = curdirshort  
+    return display_dir_short
+
+
+
 # old version
 # def ls(): # list directory
 #     files = os.listdir('.')

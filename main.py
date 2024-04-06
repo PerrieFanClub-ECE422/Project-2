@@ -95,9 +95,8 @@ def file_system(current_user_name):
     exit      => exit the file system   >> exit
     """
     print(cmds)
-    current_dir_name = ""
     while True:
-        cmd = input("\n------ SFS" + current_dir_name + "$ ").strip().split()
+        cmd = input("\n------ SFS ------ " + commands.pwd_short() + "$ ").strip().split()
         # switch statements using input cmd
         # check permissions whenever a user executes these commands
         if len(cmd) < 1: # ----------------------------------------------- invalid
