@@ -152,8 +152,9 @@ def file_system(current_user_name):
             else:
                 commands.mv(cmd[1], cmd[2])
 
-        elif cmd[0] == "chmod":
-
+        elif cmd[0] == "chmod": # ----------------------------------------------- chmod
+            print("chmod")
+        
         elif cmd[0] == "cmds": # ----------------------------------------------- cmds
             print(cmds)
         
