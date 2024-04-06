@@ -672,11 +672,6 @@ def change_directory_permissions(dir_name, group_ids):
     finally:
         conn.close()
 
-# Example usage:
-# Change permissions for a directory named "my_directory" to "read" and grant access to groups with IDs 1, 2, and 3
-change_directory_permissions("my_directory", "read", [1, 2, 3])
-
-
 def db_create_file(file_name, owner_name):
     #TODO: encrypt info in function caller, decrypt info here
 
