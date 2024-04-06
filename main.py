@@ -79,35 +79,67 @@ def create_group_prompt():
     except sqlite3.IntegrityError:
         print("Group already exists.") 
     
- 
+
 def file_system(current_user_name):
-    cmds = "\ncd \t \t => \t change directory\npwd \t \t => \t display current path\nls \t \t => \t list all items\ntouch \t \t => \t create new file\nmkdir \t \t => \t create new directory\ncmds \t \t => \t show all cmds"
+    cmds = """
+    cd        => change directory       >> cd     [filename]
+    pwd       => display current path   >> pwd
+    ls        => list all items         >> ls 
+    touch     => create new file        >> touch  [filename]
+    mkdir     => create new directory   >> mkdir  [direcname]
+    cat       => read file contents     >> cat    [filename]
+    echo      => write file contents    >> echo   [filename]  [contents]
+    cmds      => show all cmds          >> cmds
+    exit      => exit the file system   >> exit
+    """
     print(cmds)
     while True:
         cmd = input("\n------ SFS$ ").strip().split()
         # switch statements using input cmd
         # check permissions whenever a user executes these commands
-        if len(cmd) < 1:
+        if len(cmd) < 1: # ----------------------------------------------- invalid
             print("invalid cmd")
-        elif cmd[0] == "cd":
+        
+        elif cmd[0] == "cd": # ----------------------------------------------- cd
             dir_path = os.path.join(commands.pwd(), cmd[1])
             print(f"{cmd[1]}, {dir_path}")
             if check_directory_perms(current_user_name, cmd[1], dir_path):
                 commands.cd(os.path.join(commands.pwd(), cmd[1]))
-        elif cmd[0] == "pwd":
+        
+        elif cmd[0] == "pwd": # ----------------------------------------------- pwd
             commands.pwd()
-        elif cmd[0] == "ls":
+        
+        elif cmd[0] == "ls": # ----------------------------------------------- ls
             commands.ls()
-        elif cmd[0] == "touch":
+        
+        elif cmd[0] == "touch": # ----------------------------------------------- touch
             commands.touch(cmd[1], current_user_name)
-        elif cmd[0] == "mkdir":
+        
+        elif cmd[0] == "mkdir": # ----------------------------------------------- mkdir
             dir_path = commands.pwd() # get current path
             dir_name = os.path.basename(dir_path) # name of current directory
             print(f"{dir_path}, {dir_name}")
             if check_directory_perms(current_user_name, dir_name, dir_path):
                 commands.mkdir(cmd[1], current_user_name)
-        elif cmd[0] == "cmds":
+        
+        elif cmd[0] == "cat": # ----------------------------------------------- cat
+            if len(cmd) < 2:
+                print("please specify a file name")
+            else:
+                commands.cat(cmd[1])
+
+        elif cmd[0] == "echo": # ----------------------------------------------- echo
+            if len(cmd) < 3:
+                print("please specify both a file name and contents to write")
+            else:
+                commands.echo(cmd[1], cmd[2])
+
+        elif cmd[0] == "cmds": # ----------------------------------------------- cmds
             print(cmds)
+
+        elif cmd[0] == "exit": # ----------------------------------------------- exit
+            break
+        
         else:
             print("command not recognized; type 'cmds' to list all commands")
     """

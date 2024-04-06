@@ -51,11 +51,27 @@ def touch(file_name, owner_name): # create a new file (txt)
 
     return 
 
-def cat(): #read a file
-    return
+def cat(file_name): #read a file
+    try:
+        # open the file to read
+        with open(file_name, 'r') as file:
+            content = file.read()
+            print(content)
+    except FileNotFoundError:
+        print(f"Error: File '{file_name}' not found!")
+    except Exception as e:
+        print(f"Error: {e}")
 
-def echo(): #write to a file
-    return
+
+
+def echo(file_name, content): #write to a file
+    try:
+        # open the file to write/overwrite
+        with open(file_name, 'w') as file:
+            file.write(content)
+            print(f"Content written to '{file_name}'")
+    except Exception as e:
+        print(f"Error: {e}")
 
 def mv(): #rename a file
     return 
