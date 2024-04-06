@@ -45,7 +45,10 @@ def ls(dir_path='.'):
 
 def cd(directory, current_user_name, dir_name): # change dir
     dir_path = os.path.join(pwd(), dir_name)
-    if main.check_directory_perms(current_user_name, dir_name, dir_path):
+    if not os.path.exists(dir_path):
+        print(f"No directory {dir_name} exists")
+        return
+    elif main.check_directory_perms(current_user_name, dir_name, dir_path):
         os.chdir(directory)
     else:
         print(f"No access to directory {dir_name}")
