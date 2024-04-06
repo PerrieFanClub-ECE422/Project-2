@@ -165,7 +165,7 @@ def db_encrypt_data(data,username):
     cursor.execute('SELECT public_key FROM users WHERE username = ?', (username.lower(),))
     public_key_data = cursor.fetchone()[0]
     public_key = deserialize_public_key(public_key_data)
-    encrypted_data = encrypt_with_public_key(public_key, data)
+    encrypted_data = encrypt_with_public_key(public_key, data.encode())
     return encrypted_data
 
 def db_decrypt_data(data, username): 
@@ -173,7 +173,7 @@ def db_decrypt_data(data, username):
     cursor = conn.cursor()
     cursor.execute('SELECT private_key FROM users WHERE username = ?', (username.lower(),))
     private_key_data = cursor.fetchone()[0]
-    private_key = deserialize_public_key(private_key_data)
+    private_key = deserialize_private_key(private_key_data)
     decrypted_data = decrypt_with_private_key(private_key, data)
     return decrypted_data
 
@@ -662,5 +662,4 @@ if __name__ == '__main__':
             print("auth succeeded")
             user_token = db_create_session(userAuth)
             print("session created for user_id =",  db_get_session_user_id(user_token), " with token =", user_token )
-
 

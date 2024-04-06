@@ -7,6 +7,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
 
+
 def run_linux_command(command):
     # Execute the command
     exit_status = os.system(command)
@@ -95,43 +96,3 @@ def deserialize_private_key(serialized_key):
     """Deserialize a serialized private key."""
     return serialization.load_pem_private_key(serialized_key, password=None, backend=default_backend())
 
-# Test case
-def main():
-    try:
-        # Generate RSA key pair
-        private_key, public_key = generate_key_pair()
-        
-        # Encrypt data
-        data = "Hello, world!"
-        encrypted_data = encrypt_with_public_key(public_key, data.encode())
-
-        # Serialize the keys
-        serialized_private_key = serialize_private_key(private_key)
-        serialized_public_key = serialize_public_key(public_key)
-
-        # Connect to the database
-        conn = sqlite3.connect('sfs.db')  # Change 'your_database.db' to the path of your database file
-        cursor = conn.cursor()
-    
-        conn.commit()
-        print("Dummy user added successfully.")
-
-        # Fetch serialized private key from database
-        cursor.execute("SELECT private_key FROM users WHERE username = 'dummy'")
-        serialized_private_key = cursor.fetchone()[0]
-
-        # Deserialize private key
-        private_key = serialization.load_pem_private_key(serialized_private_key, password=None, backend=default_backend())
-
-        # Decrypt data using deserialized private key
-        decrypted_data = decrypt_with_private_key(private_key, encrypted_data)
-
-        print("Original Data:", data)
-        print("Decrypted Data:", decrypted_data.decode())
-        
-    except sqlite3.Error as e:
-        print(f"An error occurred: {e}")
-    finally:
-        conn.close()
-if __name__ == "__main__":
-    main()
