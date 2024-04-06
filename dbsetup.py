@@ -180,7 +180,7 @@ def db_decrypt_data(data, username):
     private_key_data = cursor.fetchone()[0]
     private_key = deserialize_private_key(private_key_data)
     decrypted_data = decrypt_with_private_key(private_key, data)
-    return decrypted_data
+    return decrypted_data.decode()
 
 def db_get_directory_perms(owner_id, dir_name, dir_path):
     try:
@@ -380,12 +380,12 @@ def db_get_existing_groups():
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    cursor.execute('SELECT name FROM groups')
+    cursor.execute('SELECT group_name FROM groups')
     groups = cursor.fetchall()
 
     conn.close()
 
-    return [group[0] for group in groups]
+    return [db_decrypt_data(group[0], "admin") for group in groups]
 
 def db_assign_user_to_groups(username, selected_groups):
     conn = sqlite3.connect(db_path)
@@ -529,7 +529,7 @@ def db_create_directory(dir_name, owner_name):
 
     owner_id = db_get_user_id(owner_name)
     print(owner_id)
-    new_dir_path = commands.pwd() + "/" + dir_name
+    new_dir_path = os.path.join(commands.pwd(), dir_name)
     print("New dir path: ", new_dir_path)
 
     conn = sqlite3.connect(db_path)
@@ -594,7 +594,7 @@ def db_create_file(file_name, owner_name):
     #TODO: encrypt info in function caller, decrypt info here
 
     owner_id = db_get_user_id(owner_name)
-    new_file_path = commands.pwd() + "/" + file_name
+    new_file_path = os.path.join(commands.pwd(), file_name)
     print(db_path)
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()

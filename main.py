@@ -36,14 +36,13 @@ def login():
         file_system(username)
     else:
         if not dbsetup.db_check_user_exists(username): 
-            print("User does not exist, please register before logging in.")
+            print("User credentials do not exist")
         else: 
             print("Invalid Password")
 
 def login_user(username, password):
     try:
         if not dbsetup.db_auth_user(username, password):
-            print("Invalid Credentials, try again")
             return False
         print("Successful login, Welcome " + username)
         return True
@@ -54,12 +53,22 @@ def register():
     username = input("Enter username: ")
     password = getpass.getpass("Enter password: ")
     
-    # Optional: Implement group selection logic if needed
-    # For simplicity, assume group_name is either entered by the user or null
-    group_name = None  # You can modify this to allow users to select a group during registration
+    listgroups = dbsetup.db_get_existing_groups()
+    print("List of available groups: ", listgroups)
 
+    inputgroup = input("Enter group name: ")
+
+    if inputgroup in listgroups:
+        print("group", inputgroup, "assigned")
+        group_name = inputgroup
+    else:
+        print("invalid group name - no group assigned")
+        group_name = None
+
+    print("registration succeeded")
     dbsetup.db_add_user(username.lower(), password, group_name)
     commands.mkdir(username.lower(), username.lower())
+    
     
 
 
@@ -81,10 +90,10 @@ def file_system(current_user_name):
         if len(cmd) < 1:
             print("invalid cmd")
         elif cmd[0] == "cd":
-            dir_path = commands.pwd() + "/" + cmd[1]
+            dir_path = os.path.join(commands.pwd(), cmd[1])
             print(f"{cmd[1]}, {dir_path}")
             if check_directory_perms(current_user_name, cmd[1], dir_path):
-                commands.cd(os.getcwd() + "/" + cmd[1])
+                commands.cd(os.path.join(commands.pwd(), cmd[1]))
         elif cmd[0] == "pwd":
             commands.pwd()
         elif cmd[0] == "ls":
