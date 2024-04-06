@@ -54,7 +54,7 @@ def init_db():
     )
 
     # directory table
-    cursor.execute("DROP TABLE IF EXISTS directories")
+    #cursor.execute("DROP TABLE IF EXISTS directories")
     cursor.execute(
         '''
         CREATE TABLE IF NOT EXISTS directories (
@@ -92,7 +92,7 @@ def init_db():
         os.mkdir(new_dir_path)
     os.chdir(new_dir_path)
 
-    cursor.execute("DROP TABLE IF EXISTS files")
+    #cursor.execute("DROP TABLE IF EXISTS files")
     # files table
     cursor.execute(
         '''
@@ -101,7 +101,7 @@ def init_db():
             real_name TEXT NOT NULL,
             encrypted_name TEXT,
             owner_id INTEGER NOT NULL,
-            dir_path TEXT NOT NULL,
+            file_path TEXT NOT NULL,
             permissions TEXT NOT NULL,
             content TEXT,
             FOREIGN KEY (owner_id) REFERENCES users (user_id)
@@ -209,6 +209,35 @@ def db_get_directory_perms(owner_id, dir_name, dir_path):
         print(f"Database error: {e}")
 
 
+def db_get_file_perms(owner_id, file_name, file_path):
+    print(owner_id, file_name, file_path)
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            SELECT permissions 
+            FROM files 
+            WHERE owner_id = ? 
+            AND real_name = ? 
+            AND file_path = ?
+            ''', 
+            (owner_id, file_name, file_path)
+        )
+
+        file_perms = cursor.fetchone()
+
+        if file_perms:
+            print("File perms found! ", file_perms)
+            return file_perms
+        else:
+            print("No file perms found, ", file_perms)
+            return None
+
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+
+
 
 def db_get_directory_id(dir_name, dir_path):
     try:
@@ -265,6 +294,34 @@ def db_get_directory_owner(dir_name, dir_path):
     finally:
         conn.close()
 
+def db_get_file_owner(file_name, file_path):
+    
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            '''
+            SELECT owner_id 
+            FROM files 
+            WHERE real_name = ? 
+            AND file_path = ? 
+            ''', 
+            (file_name, file_path)
+        )
+
+        file_owner_id = cursor.fetchone()[0]
+
+        if file_owner_id is not None:
+            return file_owner_id
+        else:
+            return None
+
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+
+    finally:
+        conn.close()
 
 def db_get_user_id(username):
 
@@ -606,7 +663,7 @@ def db_create_file(file_name, owner_name):
                 real_name, 
                 encrypted_name, 
                 owner_id, 
-                dir_path,
+                file_path,
                 permissions, 
                 content) 
                 VALUES (?, ?, ?, ?, ?, ?)
