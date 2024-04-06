@@ -104,7 +104,7 @@ def file_system(current_user_name):
             dir_path = os.path.join(commands.pwd(), cmd[1])
             print(f"{cmd[1]}, {dir_path}")
             if check_directory_perms(current_user_name, cmd[1], dir_path):
-                commands.cd(os.path.join(commands.pwd(), cmd[1]))
+                commands.cd(os.path.join(os.getcwd(), cmd[1]))
         
         elif cmd[0] == "pwd": # ----------------------------------------------- pwd
             commands.pwd()
@@ -174,13 +174,17 @@ def check_file_perms(curruser, file_name, file_path):
         file_owner_id = dbsetup.db_get_file_owner(file_name, file_path)
         print(f"{owner_id}, {file_name}, {file_path}")
 
-        if file_perms[0] == "all":
-            return True
-        elif file_perms[0] == "user":
-            if owner_id == file_owner_id:
+        if file_perms == None:
+            print(f"No access to file {file_name}")
+            return False
+        else:
+            if file_perms[0] == "all":
                 return True
-            else:
-                return False
+            elif file_perms[0] == "user":
+                if owner_id == file_owner_id:
+                    return True
+                else:
+                    return False
 
 
 def check_directory_perms(curruser, dir_name, dir_path):
@@ -201,13 +205,17 @@ def check_directory_perms(curruser, dir_name, dir_path):
         dir_owner_id = dbsetup.db_get_directory_owner(dir_name, dir_path)
         print(f"{owner_id}, {dir_path}, {dir_name}")
         
-        if dir_perms[0] == "all":
-            return True
-        elif dir_perms[0] == "user":
-            if owner_id == dir_owner_id:
+        if dir_perms == None:
+            print(f"No access to directory {dir_name}")
+            return False
+        else:
+            if dir_perms[0] == "all":
                 return True
-            else:
-                return False
+            elif dir_perms[0] == "user":
+                if owner_id == dir_owner_id:
+                    return True
+                else:
+                    return False
 
 
 
