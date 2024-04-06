@@ -94,34 +94,44 @@ def file_system(current_user_name):
     exit      => exit the file system   >> exit
     """
     print(cmds)
+    current_dir_name = ""
     while True:
-        cmd = input("\n------ SFS$ ").strip().split()
+        cmd = input("\n------ SFS" + current_dir_name + "$ ").strip().split()
         # switch statements using input cmd
         # check permissions whenever a user executes these commands
         if len(cmd) < 1: # ----------------------------------------------- invalid
             print("invalid cmd")
         
         elif cmd[0] == "cd": # ----------------------------------------------- cd
-            dir_path = os.path.join(commands.pwd(), cmd[1])
-            print(f"{cmd[1]}, {dir_path}")
-            if check_directory_perms(current_user_name, cmd[1], dir_path):
-                commands.cd(os.path.join(os.getcwd(), cmd[1]))
+            if len(cmd) > 1 and check_directory_perms(current_user_name, cmd[1], os.path.join(commands.pwd(), cmd[1])):
+                commands.cd(os.path.join(commands.pwd(), cmd[1]))
+                current_dir_name = os.path.basename(commands.pwd())  # update the current directory name
+            else:
+                print("Error: Directory not found or no permission.")
         
         elif cmd[0] == "pwd": # ----------------------------------------------- pwd
             commands.pwd()
         
         elif cmd[0] == "ls": # ----------------------------------------------- ls
-            commands.ls()
+            if len(cmd) > 1:
+                commands.ls(cmd[1])
+            else:
+                commands.ls()
         
         elif cmd[0] == "touch": # ----------------------------------------------- touch
-            commands.touch(cmd[1], current_user_name)
+            if len(cmd) < 2:
+                print("please specify a file name")
+            else:
+                commands.touch(cmd[1], current_user_name)
         
         elif cmd[0] == "mkdir": # ----------------------------------------------- mkdir
-            dir_path = commands.pwd() # get current path
-            dir_name = os.path.basename(dir_path) # name of current directory
-            print(f"{dir_path}, {dir_name}")
-            if check_directory_perms(current_user_name, dir_name, dir_path):
-                commands.mkdir(cmd[1], current_user_name)
+            if len(cmd) < 2:
+                print("please specify a directory name")
+            else:
+                dir_path = commands.pwd()
+                dir_name = os.path.basename(dir_path)
+                if check_directory_perms(current_user_name, dir_name, dir_path):
+                    commands.mkdir(cmd[1], current_user_name)
         
         elif cmd[0] == "cat": # ----------------------------------------------- cat
             if len(cmd) < 2:

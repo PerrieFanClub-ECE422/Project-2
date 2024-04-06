@@ -8,10 +8,24 @@ def pwd(): # see current directory
     print("Current dir: ", display_dir)
     return display_dir
 
-def ls():
-    files = os.listdir('.')
-    for file in files: 
-        print(file, end="  ")
+# old version
+# def ls(): # list directory
+#     files = os.listdir('.')
+#     for file in files: 
+#         print(file, end="  ")
+
+def ls(dir_path='.'):
+    try:
+        files = os.listdir(dir_path)
+        for file in files:
+            print(file, end="  ")
+        print()
+    except FileNotFoundError:
+        print(f"Error: Directory '{dir_path}' not found.")
+    except PermissionError:
+        print(f"Error: Permission denied to access '{dir_path}'.")
+    except Exception as e:
+        print(f"Error: {e}")
 
 
 def cd(directory): # change dir
