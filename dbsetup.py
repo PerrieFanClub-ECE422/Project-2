@@ -434,15 +434,19 @@ def db_add_group(group_name):
         return False
     
 def db_get_existing_groups():
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
 
-    cursor.execute('SELECT group_name FROM groups')
-    groups = cursor.fetchall()
+        cursor.execute('SELECT group_id, group_name FROM groups')
+        groups = cursor.fetchall()
 
-    conn.close()
+        conn.close()
 
-    return [db_decrypt_data(group[0], "admin") for group in groups]
+        return [{'group_id': group[0], 'group_name': db_decrypt_data(group[1], "admin")} for group in groups]
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+        return []
 
 def db_assign_user_to_groups(username, selected_groups):
     conn = sqlite3.connect(db_path)

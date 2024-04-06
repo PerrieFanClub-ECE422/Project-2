@@ -68,9 +68,6 @@ def register():
     print("registration succeeded")
     dbsetup.db_add_user(username.lower(), password, group_name)
     commands.mkdir(username.lower(), username.lower())
-    
-    
-
 
 def create_group_prompt():
     group_name = input("Enter group name: ")
