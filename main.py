@@ -69,7 +69,7 @@ def register():
     dbsetup.db_add_user(username.lower(), password, group_name)
     commands.mkdir(username.lower(), username.lower())
     
-    
+
 
 
 def create_group_prompt():
@@ -95,7 +95,9 @@ def file_system(current_user_name):
     exit      => exit the file system   >> exit
     """
     print(cmds)
+    list_files(os.path.join(os.getcwd(),current_user_name), current_user_name)
     while True:
+
         cmd = input("\n------ SFS ------ " + commands.pwd_short() + "$ ").strip().split()
         # switch statements using input cmd
         # check permissions whenever a user executes these commands
@@ -159,6 +161,10 @@ def file_system(current_user_name):
         elif cmd[0] == "chmod": # ----------------------------------------------- chmod
             if len(cmd) < 3:
                 print("please specify flag and target name")
+            else:
+                flag = cmd[1]
+                target_name = cmd[2]
+                
         
         elif cmd[0] == "cmds": # ----------------------------------------------- cmds
             print(cmds)
@@ -233,7 +239,7 @@ def check_directory_perms(curruser, dir_name, dir_path):
         else:
             if owner_id == dir_owner_id:
                 return True
-            if dir_perms[0] == "all":
+            elif dir_perms[0] == "all":
                 return True
             else:
                 return False
@@ -246,5 +252,19 @@ def check_directory_perms(curruser, dir_name, dir_path):
     # set CURRENT_USER variable to the unique ID of the user that just logged in.
     # CURRENT_USER = <query to get unique ID>
 
+
+def list_files(directory, username):
+    for root, dirs, files in os.walk(directory):
+        for f in files:
+            f_path = os.path.join(root, f)
+
+            #dbsetup.db_check_file_name_integrity(f, f_path, username)
+
+            with open(f_path, 'r') as fi:
+                content = fi.read()
+                dbsetup.db_check_file_content_integrity(f, content, f_path, username)
+
+
 if __name__ == '__main__':
+
     main()
