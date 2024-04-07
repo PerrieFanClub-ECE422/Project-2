@@ -200,7 +200,6 @@ def check_file_perms(curruser, file_name, file_path):
         print(f"{curruser}:No permission to access file")
         return False
     else:
-
         curruser_id = dbsetup.db_get_user_id(curruser)
         file_perms = dbsetup.db_get_file_perms(file_name, file_path)
         file_owner_id = dbsetup.db_get_file_owner(file_name, file_path)
@@ -208,7 +207,7 @@ def check_file_perms(curruser, file_name, file_path):
             if file_perms == "owner" and (curruser_id == file_owner_id):
                 return True
             elif file_perms == "owner" and (curruser_id != file_owner_id):
-                return True
+                return False
             elif file_perms[0] == "all":
                 return True
             elif dbsetup.db_check_user_in_group(curruser, file_perms):
