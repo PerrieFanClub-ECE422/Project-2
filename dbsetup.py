@@ -1,14 +1,12 @@
+import binascii
 import sqlite3
 from hashlib import sha256
-import secrets
 import commands
 from utils import generate_key_pair
 import os
 import base64
 from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding
@@ -151,18 +149,18 @@ def db_encrypt_data(plaintext):
     cipher = Cipher(algorithms.AES(AES_KEY), modes.CBC(b'0000000000000000'), backend=default_backend())
     encryptor = cipher.encryptor()
     ciphertext = encryptor.update(padded_plaintext) + encryptor.finalize()
-    encrypted_base64 = base64.b64encode(ciphertext).decode('utf-8')
-    return encrypted_base64
+
+    # Encode the ciphertext in hexadecimal
+    encrypted_hex = binascii.hexlify(ciphertext).decode('utf-8')
+    return encrypted_hex
 
 def db_decrypt_data(encrypted_data): 
-    #TODO: REFERENCE OR REYNEL GETS EXPELLED
-    encrypted_data = base64.b64decode(encrypted_data.encode('utf-8'))
-
+    # Decode the hexadecimal encoded encrypted data
+    encrypted_data = binascii.unhexlify(encrypted_data.encode('utf-8'))
 
     cipher = Cipher(algorithms.AES(AES_KEY), modes.CBC(b'0000000000000000'), backend=default_backend())
     decryptor = cipher.decryptor()
     decrypted_data = decryptor.update(encrypted_data) + decryptor.finalize()
-
 
     unpadder = padding.PKCS7(128).unpadder()
     decrypted_data = unpadder.update(decrypted_data) + unpadder.finalize()
@@ -703,14 +701,14 @@ def db_get_and_change_permissions(dir_name, username, fileflag):
 
     # Check if user is owner of the group and change permissions for valid groups
     owner_id = db_get_user_id(username)
-    valid_group_names = [group_name for group_name in group_names if db_check_user_in_group(username, group_name, owner_id)]
+    valid_group_names = [group_name for group_name in group_names if db_check_user_in_group(username, group_name)]
     if valid_group_names:
         print("Provided existing groups that you are a part of: ", valid_group_names)
         change_permissions(dir_name, valid_group_names, fileflag)
     else:
         print("No valid group names provided.")
 
-def db_check_user_in_group(username, group_name, owner_id):
+def db_check_user_in_group(username, group_name):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute('SELECT group_name FROM users WHERE username = ?', (db_encrypt_data(username),))

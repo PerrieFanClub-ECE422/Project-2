@@ -29,11 +29,15 @@ def pwd_short():
 #     for file in files: 
 #         print(file, end="  ")
 
-def ls(dir_path='.'):
+def ls(username, dir_path):
     try:
+        e_username = dbsetup.db_encrypt_data(username)
         files = os.listdir(dir_path)
         for file in files:
-            print(file, end="  ")
+            if main.check_directory_perms(e_username, file, dir_path) or main.check_file_perm(username, dir_path): 
+                print(dbsetup.db_decrypt_data(file))
+            else: 
+                print(file, end="  ")
         print()
     except FileNotFoundError:
         print(f"Error: Directory '{dir_path}' not found.")
@@ -75,7 +79,6 @@ def mkdir(new_dir, owner_name): # make new subdir in current directory on disk
     return 
 
 def touch(file_name, owner_name): # create a new file (txt)
-    #TODO: CHECK IF USER HAS DIRECTORY PERMS
 
     e_file_name = dbsetup.db_encrypt_data(file_name)
 

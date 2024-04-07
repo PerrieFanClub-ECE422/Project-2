@@ -124,9 +124,9 @@ def file_system(current_user_name):
         
         elif cmd[0] == "ls": # ----------------------------------------------- ls
             if len(cmd) > 1:
-                commands.ls(cmd[1])
+                commands.ls(current_user_name, os.path.join(os.getcwd(), cmd[1]))
             else:
-                commands.ls()
+                commands.ls(current_user_name,os.getcwd())
         
         elif cmd[0] == "touch": # ----------------------------------------------- touch
             if len(cmd) < 2:
@@ -189,6 +189,10 @@ def file_system(current_user_name):
             print(cmds)
         
         elif cmd[0] == "exit": # ----------------------------------------------- exit
+            # Change directory to ~/root on exit
+            root_dir = os.path.join(os.path.expanduser('~'), 'Project-2/root')
+            os.chdir(root_dir)
+            print("Exiting...")
             break
         
         else:
@@ -248,6 +252,8 @@ def check_directory_perms(e_user_name, e_dir_name, e_dir_path):
             if owner_id == dir_owner_id:
                 return True
             elif dir_perms[0] == "all":
+                return True
+            elif dbsetup.db_check_user_in_group(curruser, dir_perms):
                 return True
             else:
                 return False
