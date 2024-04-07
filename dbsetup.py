@@ -96,8 +96,7 @@ def init_db():
         '''
         CREATE TABLE IF NOT EXISTS files (
             file_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            real_name TEXT NOT NULL,
-            encrypted_name TEXT,
+            file_name TEXT NOT NULL,
             owner_id INTEGER NOT NULL,
             file_path TEXT NOT NULL,
             permissions TEXT NOT NULL,
@@ -572,24 +571,27 @@ def db_create_file(file_name, owner_name):
 
     owner_id = db_get_user_id(owner_name)
     new_file_path = os.path.join(commands.pwd(), file_name)
-    print(db_path)
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     try:
-        #TODO: possibly make sure that owner_id is referencing the tables correctly
-        cursor.execute(
-            '''INSERT INTO files (
-                real_name, 
-                encrypted_name, 
-                owner_id, 
-                file_path,
-                permissions, 
-                content) 
-                VALUES (?, ?, ?, ?, ?, ?)
-                ''', 
-                (file_name, "hashed_file_name", owner_id, new_file_path, "owner", "filler content")
-            )
+        cursor.execute("SELECT * FROM files WHERE file_name = ? AND file_path = ?", (db_encrypt_data(file_name), db_encrypt_data(new_file_path)))
+        result = cursor.fetchone()
+        if result is not None:
+            print("Directory already exists")
+            return  # Entry exists
+        else:
+            cursor.execute(
+                '''INSERT INTO files (
+                    file_name, 
+                    owner_id, 
+                    file_path,
+                    permissions, 
+                    content) 
+                    VALUES (?, ?, ?, ?, ?)
+                    ''', 
+                    (db_encrypt_data(file_name), owner_id, db_encrypt_data(new_file_path), db_encrypt_data("owner"), db_encrypt_data(""))
+                )
 
         
         print(f"File {file_name} created by {owner_name}")
@@ -659,6 +661,5 @@ def db_check_file_content_integrity(filename, external_filecontent, file_path, u
 
     except sqlite3.Error as e:
         print("SQLite error:", e)
-
 
 

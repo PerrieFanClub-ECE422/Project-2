@@ -76,17 +76,19 @@ def mkdir(new_dir, owner_name): # make new subdir in current directory on disk
 
 def touch(file_name, owner_name): # create a new file (txt)
     #TODO: CHECK IF USER HAS DIRECTORY PERMS
+
+    e_file_name = dbsetup.db_encrypt_data(file_name)
+
     try:
         # Check if the file already exists
-        if not os.path.exists(file_name):
+        if not os.path.exists(e_file_name):
             # If it doesn't exist, create file
-            with open(file_name, 'w'):
+            with open(e_file_name, 'w'):
                 pass
-            
-            dbsetup.db_create_file(file_name, owner_name)
-            print(f"File '{file_name}' created successfully.")
+            dbsetup.db_create_file(dbsetup.db_decrypt_data(e_file_name), owner_name)
+            print(f"File '{e_file_name}' created successfully.")
         else:
-            print(f"File '{file_name}' already exists!")
+            print(f"File '{e_file_name}' already exists!")
 
     except Exception as e:
         print("Error:", e)
@@ -112,6 +114,8 @@ def echo(file_name, content): #write to a file
         with open(file_name, 'w') as file:
             file.write(content)
             print(f"Content written to '{file_name}'")
+        
+        #TODO: CHANGE IN DB
     except Exception as e:
         print(f"Error: {e}")
 
@@ -123,6 +127,7 @@ def mv(file_name, new_name): #rename a file
         if not os.path.exists(new_name):
             # If it doesn't exist, rename file
             os.rename(file_name, new_name)
+            # TODO: need to rename in db?
             print(f"File '{file_name}' renamed to '{new_name}'")
     except FileNotFoundError:
         print(f"Error: '{file_name}' does not exist.")

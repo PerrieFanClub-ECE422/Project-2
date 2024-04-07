@@ -134,7 +134,15 @@ def file_system(current_user_name):
             if len(cmd) < 2:
                 print("please specify a file name")
             else:
-                commands.touch(cmd[1], current_user_name)
+                dir_path = commands.pwd()
+                dir_name = os.path.basename(dir_path)
+                
+                e_dir_path = dbsetup.db_encrypt_data(dir_path)
+                e_dir_name = dbsetup.db_encrypt_data(dir_name)
+                e_user_name = dbsetup.db_encrypt_data(current_user_name)
+
+                if check_directory_perms(e_user_name, e_dir_name, e_dir_path): 
+                     commands.touch(cmd[1], current_user_name)
         
         elif cmd[0] == "mkdir": # ----------------------------------------------- mkdir
             if len(cmd) < 2:
@@ -192,8 +200,6 @@ def check_file_perms(curruser, file_name, file_path):
         print(f"{curruser}:No permission to access directory")
         return False
     else:
-
-
 
         owner_id = dbsetup.db_get_user_id(curruser)
         file_perms = dbsetup.db_get_file_perms(owner_id, file_name, file_path)
