@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding
-
+import binascii
 # global vars
 db_path= os.getcwd() + '/sfs.db'
 private_key = None
@@ -151,18 +151,18 @@ def db_encrypt_data(plaintext):
     cipher = Cipher(algorithms.AES(AES_KEY), modes.CBC(b'0000000000000000'), backend=default_backend())
     encryptor = cipher.encryptor()
     ciphertext = encryptor.update(padded_plaintext) + encryptor.finalize()
-    encrypted_base64 = base64.b64encode(ciphertext).decode('utf-8')
-    return encrypted_base64
+
+    # Encode the ciphertext in hexadecimal
+    encrypted_hex = binascii.hexlify(ciphertext).decode('utf-8')
+    return encrypted_hex
 
 def db_decrypt_data(encrypted_data): 
     #TODO: REFERENCE OR REYNEL GETS EXPELLED
-    encrypted_data = base64.b64decode(encrypted_data.encode('utf-8'))
-
+    encrypted_data = binascii.unhexlify(encrypted_data.encode('utf-8'))
 
     cipher = Cipher(algorithms.AES(AES_KEY), modes.CBC(b'0000000000000000'), backend=default_backend())
     decryptor = cipher.decryptor()
     decrypted_data = decryptor.update(encrypted_data) + decryptor.finalize()
-
 
     unpadder = padding.PKCS7(128).unpadder()
     decrypted_data = unpadder.update(decrypted_data) + unpadder.finalize()
