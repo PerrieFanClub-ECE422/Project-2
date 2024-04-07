@@ -1,22 +1,57 @@
 import os
 import dbsetup
+import main
 ROOT_DIR = "/home/ubuntu/Project-2/root"
 
 def pwd(): # see current directory
     curdir = os.getcwd()
-    display_dir = curdir.replace(ROOT_DIR, "root")
-    print("Current dir: ", display_dir)
-    return display_dir
-
-def ls():
-    files = os.listdir('.')
-    for file in files: 
-        print(file, end="  ")
+    return curdir
 
 
-def cd(directory): # change dir
-    os.chdir(directory)
-    print("Now in ", os.getcwd())
+
+ROOT_DIR_SHORT = os.path.dirname(os.path.abspath(__file__))
+def pwd_short():
+    curdirshort = os.getcwd()
+    # Make the path relative to ROOT_DIR_SHORT if within it
+    if curdirshort.startswith(ROOT_DIR_SHORT):
+        display_dir_short = curdirshort.replace(ROOT_DIR_SHORT, "").lstrip(os.sep)
+        display_dir_short = os.sep + display_dir_short if display_dir_short else "root"
+    else:
+        # Fallback in case the current dir is outside ROOT_DIR_SHORT
+        display_dir_short = curdirshort  
+    return display_dir_short
+
+
+
+# old version
+# def ls(): # list directory
+#     files = os.listdir('.')
+#     for file in files: 
+#         print(file, end="  ")
+
+def ls(dir_path='.'):
+    try:
+        files = os.listdir(dir_path)
+        for file in files:
+            print(file, end="  ")
+        print()
+    except FileNotFoundError:
+        print(f"Error: Directory '{dir_path}' not found.")
+    except PermissionError:
+        print(f"Error: Permission denied to access '{dir_path}'.")
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+def cd(directory, current_user_name, dir_name): # change dir
+    dir_path = os.path.join(pwd(), dir_name)
+    if not os.path.exists(dir_path):
+        print(f"No directory {dir_name} exists")
+        return
+    elif main.check_directory_perms(current_user_name, dir_name, dir_path):
+        os.chdir(directory)
+    else:
+        print(f"No access to directory {dir_name}")
 
     return 
 
@@ -88,3 +123,4 @@ def mv(file_name, new_name): #rename a file
 
 def chmod(flag, mode, file_name):
     
+    return

@@ -7,7 +7,6 @@ import os
 # global vars
 db_path= os.getcwd() + '/sfs.db'
 ROOT_PARENT_ID = 0
-
 def init_db():
 
     # connect and create cursor
@@ -23,24 +22,11 @@ def init_db():
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             group_name TEXT,
-            private_key BLOB,
-            public_key BLOB,           
             FOREIGN KEY(group_name) REFERENCES groups(name)
         )
         '''
     )
 
-    # sessions table
-    cursor.execute(
-        '''
-        CREATE TABLE IF NOT EXISTS sessions (
-            session_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            token TEXT UNIQUE NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users (user_id)
-        )
-        '''
-    )
 
 
     # groups table
@@ -199,10 +185,9 @@ def db_get_directory_perms(owner_id, dir_name, dir_path):
         dir_perms = cursor.fetchone()
 
         if dir_perms:
-            print("Directory perms found! ", dir_perms)
             return dir_perms
         else:
-            print("No dir perms found, ", dir_perms)
+            print("No dir perms found")
             return None
 
     except sqlite3.Error as e:
@@ -438,12 +423,19 @@ def db_get_existing_groups():
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
 
-        cursor.execute('SELECT group_id, group_name FROM groups')
+        cursor.execute('SELECT group_name FROM groups')
         groups = cursor.fetchall()
 
         conn.close()
 
-        return [{'group_id': group[0], 'group_name': db_decrypt_data(group[1], "admin")} for group in groups]
+        # Print the group names in a nice format
+        print("Existing groups:")
+        for group in groups:
+            group_name = db_decrypt_data(group[0], "admin")
+            print(f"- {group_name}")
+
+        # Return a list of decrypted group names
+        return [db_decrypt_data(group[0], "admin") for group in groups]
     except sqlite3.Error as e:
         print(f"An error occurred: {e}")
         return []
@@ -483,6 +475,7 @@ def db_add_user(username, password, group_name=None):
 
     except sqlite3.IntegrityError:
         print("error - username already exists")
+        return False
 
     except sqlite3.Error as e:
         print(f"error occurred: {e}")
@@ -612,7 +605,7 @@ def db_create_directory(dir_name, owner_name):
                     )
                     VALUES (?, ?, ?, ?,?,?)
                     ''', 
-                    (dir_name, "encrypted_dir_name",0, owner_id, new_dir_path, None)
+                    (dir_name, "encrypted_dir_name",0, owner_id, new_dir_path, "owner")
                 )
 
             conn.commit()
@@ -649,7 +642,7 @@ def db_get_directory_id(dir_name, parent_dir_id):
         print("SQLite error:", e)
         return None
 
-def change_directory_permissions(dir_name, group_ids):
+def change_directory_permissions(dir_name, group_names):
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -660,7 +653,7 @@ def change_directory_permissions(dir_name, group_ids):
         
         if dir_id:            
             # Convert group IDs to a string to store as permissions
-            permissions = ','.join(str(group_id) for group_id in group_ids)
+            permissions = ','.join(str(group_id) for group_name in group_names)
             
             # Update permissions for the directory
             cursor.execute("UPDATE directories SET permissions = ? WHERE dir_id = ?", (permissions, dir_id))
@@ -697,7 +690,7 @@ def db_create_file(file_name, owner_name):
                 content) 
                 VALUES (?, ?, ?, ?, ?, ?)
                 ''', 
-                (file_name, "hashed_file_name", owner_id, new_file_path,None, "filler content")
+                (file_name, "hashed_file_name", owner_id, new_file_path, "owner", "filler content")
             )
 
         
@@ -742,27 +735,115 @@ def get_public_key(username):
     else:
         return None
 
+def db_check_file_name_integrity(external_filename, file_path, username):
 
-# testing
-if __name__ == '__main__':
-    init_db() # to init the db
-    yorn = input("add user? [y/n] >")
-    if yorn.lower() == 'y':
-        uu = input("u: ")
-        pp = input("p: ")
-        db_add_user(uu, pp)
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    print(f" arg: {external_filename}, {file_path}, {username}")
+    try:
+        cursor.execute(
+            '''
+            SELECT encrypted_name
+            FROM files
+            WHERE file_path = ?
+            ''', 
+            (file_path,)
+            )
+
+        db_encrypted_name = cursor.fetchone()
+
+        if db_encrypted_name:
+            if db_encrypted_name != db_encrypt_data(external_filename, username):
+                print(f"{external_filename}'s name has been modified by an external user!")
+                return
+        else:
+            print("no such file exists")
+
+    except sqlite3.Error as e:
+        print("SQLite error:", e)
+
+def db_check_file_content_integrity(filename, external_filecontent, file_path, username):
+    
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    print(f" arg: {external_filecontent}, {file_path}, {username}")
+    try:
+        cursor.execute(
+            '''
+            SELECT content
+            FROM files
+            WHERE file_path = ?
+            ''', 
+            (file_path,)
+            )
+        
+        db_encrypted_content = cursor.fetchone()
+
+        if db_encrypted_content:
+            if db_encrypted_content != db_encrypt_data(external_filecontent, username):
+                print(f"{filename}'s CONTENT has been modified by an external user!")
+                return
+        else:
+            print("no such file exists")
+
+    except sqlite3.Error as e:
+        print("SQLite error:", e)
+
+def prompt_and_change_directory_permissions(dir_name, username):
+    # Prompt the user to select permission type
+        print("Select permission type:")
+        print("1. All")
+        print("2. Owner")
+        print("3. Certain groups")
+
+        choice = input("Enter your choice (1, 2, or 3): ")
+
+        if choice == '1':
+            # Change permissions to "all"
+            change_directory_permissions(dir_name, ["all"])
+        elif choice == '2':
+            # Change permissions to "owner"
+            change_directory_permissions(dir_name, ["owner"])
+        elif choice == '3':
+            # Show available groups
+            db_get_existing_groups()
+
+            group_names_with_commas = input("Enter group names separated by comma: ").split(',')
+            group_names = group_names_with_commas.split(',')
+            
+            # Check if user is owner of the group
+            owner_id = db_get_user_id(username)
+            valid_group_ids = []
+            for group_name in group_names:
+                if db_check_user_in_group(group_name, owner_id):
+                    valid_group_ids.append(group_name)
+                    print(f"You are a part group: {group_name}, valid group name!")
+                else:
+                    print(f"You are not a part of group : {group_name}, will ignore this group")
+
+            # Change permissions for valid groups
+            if valid_group_ids:
+                change_directory_permissions(dir_name, valid_group_ids)
+            else:
+                print("No valid group IDs provided.")
+        else:
+            print("Invalid choice. Please enter 1, 2, or 3.")
 
 
-    for usern in db_get_all_users():
-        print(usern)
+def db_check_user_in_group(username, group_name):
+    conn = sqlite3.connect(db_path)  
+    cursor = conn.cursor()
 
-    while True:
-        print("auth------------------------")
-        uname = input("username: ")
-        pw = input("password: ")
-        userAuth = db_auth_user(uname, pw)
-        if userAuth:
-            print("auth succeeded")
-            user_token = db_create_session(userAuth)
-            print("session created for user_id =",  db_get_session_user_id(user_token), " with token =", user_token )
+    # Query to check if the given user belongs to the specified group
+    cursor.execute('SELECT group_name FROM users WHERE username = ?', (username,))
+    result = cursor.fetchone()
 
+    conn.close()
+
+    # If the result is not None, extract the user's groups and check if the specified group is among them
+    if result:
+        user_groups = result[0].split(',')  # Assuming groups are comma-separated
+        return group_name in user_groups
+    else:
+        return False
