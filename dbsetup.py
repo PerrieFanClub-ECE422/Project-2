@@ -578,7 +578,7 @@ def db_create_file(file_name, owner_name):
         cursor.execute("SELECT * FROM files WHERE file_name = ? AND file_path = ?", (db_encrypt_data(file_name), db_encrypt_data(new_file_path)))
         result = cursor.fetchone()
         if result is not None:
-            print("Directory already exists")
+            print("File already exists")
             return  # Entry exists
         else:
             cursor.execute(
@@ -597,6 +597,8 @@ def db_create_file(file_name, owner_name):
         print(f"File {file_name} created by {owner_name}")
 
         conn.commit()
+
+
     except sqlite3.Error as e:
         print("SQLite error:", e)
         return None
@@ -604,7 +606,6 @@ def db_create_file(file_name, owner_name):
 
     finally:
         conn.close()
-    # populate files database with name, hashed name, owner id, permission type, content = empty for now
 
 
 def db_check_file_name_integrity(external_filename, file_path, username):
