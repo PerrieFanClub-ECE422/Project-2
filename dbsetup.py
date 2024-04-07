@@ -80,7 +80,7 @@ def init_db():
             ) 
             VALUES (?, ?, ?, ?)
         ''', 
-        (db_encrypt_data("root"), 0, db_encrypt_data("root"), db_encrypt_data("all"))
+        ("root", 0, "root", db_encrypt_data("all"))
     )
 
     new_dir_path = os.path.join(os.getcwd(), "root")
@@ -182,7 +182,7 @@ def db_get_directory_perms(owner_id, dir_name, dir_path):
             AND dir_name = ? 
             AND dir_path = ?
             ''', 
-            (owner_id, db_encrypt_data(dir_name), db_encrypt_data(dir_path))
+            (owner_id, dir_name, dir_path)
         )
 
         #TODO: Incompatible with multiple groups because dir_perms returns tuple
@@ -239,7 +239,7 @@ def db_get_directory_id(dir_name, dir_path):
             WHERE dir_name = ? 
             AND dir_path = ?
             ''', 
-            (db_encrypt_data(dir_name), db_encrypt_data(dir_path))
+            (db_encrypt_data(dir_name), dir_path)
         )
         dir_id = cursor.fetchone()
 
@@ -267,7 +267,7 @@ def db_get_directory_owner(dir_name, dir_path):
             WHERE dir_name = ? 
             AND dir_path = ? 
             ''', 
-            (db_encrypt_data(dir_name), db_encrypt_data(dir_path))
+            (dir_name, dir_path)
         )
 
         dir_owner_id = cursor.fetchone()
@@ -487,14 +487,14 @@ def db_auth_user(username, password):
 
 
 def db_create_directory(dir_name, owner_name):
-
+    e_dir_name = db_encrypt_data(dir_name)
     owner_id = db_get_user_id(owner_name)
-    new_dir_path = os.path.join(commands.pwd(), dir_name)
+    new_dir_path = os.path.join(commands.pwd(), e_dir_name)
 
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT * FROM directories WHERE dir_name = ? AND dir_path = ?", (db_encrypt_data(dir_name), db_encrypt_data(new_dir_path)))
+        cursor.execute("SELECT * FROM directories WHERE dir_name = ? AND dir_path = ?", (e_dir_name, new_dir_path))
         result = cursor.fetchone()
         if result is not None:
             print("Directory already exists")
@@ -510,7 +510,7 @@ def db_create_directory(dir_name, owner_name):
                     )
                     VALUES (?, ?, ?, ?)
                     ''', 
-                    (db_encrypt_data(dir_name), owner_id, db_encrypt_data(new_dir_path), db_encrypt_data("owner"))
+                    (e_dir_name, owner_id, new_dir_path, db_encrypt_data("owner"))
                 )
 
             conn.commit()

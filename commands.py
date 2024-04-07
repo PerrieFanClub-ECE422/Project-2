@@ -46,33 +46,44 @@ def ls(dir_path='.'):
 def cd(directory, current_user_name, dir_name): # change dir
     dir_path = os.path.join(pwd(), dir_name)
 
-    e_dir_path = dbsetup.db_encrypt_data(dir_path)
-    e_dir_name = dbsetup.db_encrypt_data(dir_name)
-    e_user_name = dbsetup.db_encrypt_data(current_user_name)
-
     if not os.path.exists(dir_path):
         print(f"No directory {dir_name} exists")
         return
-    elif main.check_directory_perms(e_user_name, e_dir_name, e_dir_path):
+    elif main.check_directory_perms(current_user_name, dir_name, dir_path):
         os.chdir(directory)
     else:
         print(f"No access to directory {dir_name}")
 
     return 
 
-def mkdir(new_dir, owner_name): # make new subdir in current directory on disk
-    current_dir = os.getcwd()
-    e_new_dir = dbsetup.db_encrypt_data(new_dir)
-    e_current_dir = dbsetup.db_encrypt_data(current_dir)
 
+def mkdir(new_dir, owner_name):
+    e_new_dir = dbsetup.db_encrypt_data(new_dir)
+    print(e_new_dir)
     # Create a new directory inside the current directory
-    new_dir_path = os.path.join(current_dir, new_dir)
+    new_dir_path = os.path.join(os.getcwd(), e_new_dir)
+    print("new_dir_path", new_dir_path)
     os.mkdir(new_dir_path)
     #create a new directory for the user in database
 
     dbsetup.db_create_directory(dbsetup.db_decrypt_data(e_new_dir), owner_name)
 
-    return 
+
+
+# def mkdir(new_dir, owner_name): # make new subdir in current directory on disk
+#     current_dir = os.getcwd()
+#     e_current_dir = dbsetup.db_encrypt_data(current_dir)
+
+#     e_new_dir = dbsetup.db_encrypt_data(new_dir)
+
+#     # Create a new directory inside the current directory
+#     new_dir_path = os.path.join(e_current_dir, e_new_dir)
+#     os.mkdir(new_dir_path)
+#     #create a new directory for the user in database
+
+#     dbsetup.db_create_directory(dbsetup.db_decrypt_data(e_new_dir), owner_name)
+
+#     return 
 
 def touch(file_name, owner_name): # create a new file (txt)
     #TODO: CHECK IF USER HAS DIRECTORY PERMS
@@ -86,9 +97,9 @@ def touch(file_name, owner_name): # create a new file (txt)
             with open(e_file_name, 'w'):
                 pass
             dbsetup.db_create_file(dbsetup.db_decrypt_data(e_file_name), owner_name)
-            print(f"File '{e_file_name}' created successfully.")
+            print(f"File '{dbsetup.db_decrypt_data(e_file_name)}' created successfully.")
         else:
-            print(f"File '{e_file_name}' already exists!")
+            print(f"File '{dbsetup.db_decrypt_data(e_file_name)}' already exists!")
 
     except Exception as e:
         print("Error:", e)
