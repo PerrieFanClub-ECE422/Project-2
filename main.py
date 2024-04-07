@@ -117,7 +117,8 @@ def file_system(current_user_name):
                     parentdir = os.path.dirname(curdir)
                     os.chdir(parentdir)
 
-                else:   
+                else: 
+                    # os.path.join(os.getcwd(), cmd[1]) == new_dir_path in commands.mkdir()
                     commands.cd(os.path.join(os.getcwd(), cmd[1]), current_user_name, cmd[1])
 
         elif cmd[0] == "pwd": # ----------------------------------------------- pwd

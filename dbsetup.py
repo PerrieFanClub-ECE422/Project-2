@@ -186,7 +186,9 @@ def db_get_directory_perms(owner_id, dir_name, dir_path):
             ''', 
             (owner_id, db_encrypt_data(dir_name), db_encrypt_data(dir_path))
         )
-        dir_perms = cursor.fetchone()
+
+        #TODO: Incompatible with multiple groups because dir_perms returns tuple
+        dir_perms = cursor.fetchone()[0]
 
         if dir_perms:
             return db_decrypt_data(dir_perms)
