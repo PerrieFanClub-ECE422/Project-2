@@ -82,6 +82,7 @@ def mkdir(new_dir, owner_name):
     dbsetup.db_create_directory(dbsetup.db_decrypt_data(e_new_dir), owner_name)
 
 
+
 def touch(file_name, owner_name): # create a new file (txt)
 
     e_file_name = dbsetup.db_encrypt_data(file_name)
@@ -103,11 +104,14 @@ def touch(file_name, owner_name): # create a new file (txt)
     return 
 
 def cat(file_name): #read a file
+    e_file_name = dbsetup.db_encrypt_data(file_name)
+
     try:
         # open the file to read
-        with open(file_name, 'r') as file:
+        with open(e_file_name, 'r') as file:
             content = file.read()
-            print(content)
+            if content:
+                print(dbsetup.db_decrypt_data(content))
     except FileNotFoundError:
         print(f"Error: File '{file_name}' not found!")
     except Exception as e:
@@ -116,10 +120,12 @@ def cat(file_name): #read a file
 
 
 def echo(file_name, content): #write to a file
+    e_file_name = dbsetup.db_encrypt_data(file_name)
     try:
         # open the file to write/overwrite
-        with open(file_name, 'w') as file:
-            file.write(content)
+        with open(e_file_name, 'w') as file:
+            file.write(dbsetup.db_encrypt_data(content))
+            dbsetup.db_modify_file_contents(file_name, content)
             print(f"Content written to '{file_name}'")
         
         #TODO: CHANGE IN DB
@@ -128,13 +134,14 @@ def echo(file_name, content): #write to a file
 
 
 def mv(file_name, new_name): #rename a file
+    e_file_name = dbsetup.db_encrypt_data(file_name)
+    e_new_name = dbsetup.db_encrypt_data(new_name)
     try:
-
         # Check if the new file name exists to avoid accidental overwriting
-        if not os.path.exists(new_name):
+        if not os.path.exists(e_new_name):
             # If it doesn't exist, rename file
-            os.rename(file_name, new_name)
-            # TODO: need to rename in db?
+            os.rename(e_file_name, e_new_name)
+            dbsetup.db_modify_file_name(file_name, new_name)
             print(f"File '{file_name}' renamed to '{new_name}'")
     except FileNotFoundError:
         print(f"Error: '{file_name}' does not exist.")

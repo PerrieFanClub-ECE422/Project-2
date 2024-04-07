@@ -97,7 +97,7 @@ def file_system(current_user_name):
     exit      => exit the file system   >> exit
     """
     print(cmds)
-    list_files(os.path.join(os.getcwd(),current_user_name), current_user_name)
+    list_files(os.path.join(os.getcwd(),dbsetup.db_encrypt_data(current_user_name)), dbsetup.db_encrypt_data(current_user_name))
     while True:
 
         cmd = input("\n------ SFS ------ " + commands.pwd_short() + "$ ").strip().split()
@@ -255,14 +255,13 @@ def check_directory_perms(curruser, dir_name, dir_path):
 
 def list_files(directory, username):
     for root, dirs, files in os.walk(directory):
-        for f in files:
-            f_path = os.path.join(root, f)
-
+        for file_name in files:
+            f_path = os.path.join(root, file_name)
             #dbsetup.db_check_file_name_integrity(f, f_path, username)
 
             with open(f_path, 'r') as fi:
                 content = fi.read()
-                dbsetup.db_check_file_content_integrity(f, content, f_path, username)
+                dbsetup.db_check_file_content_integrity(dbsetup.db_decrypt_data(file_name), content, f_path, username)
 
 
 if __name__ == '__main__':

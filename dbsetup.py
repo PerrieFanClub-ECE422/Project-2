@@ -613,6 +613,98 @@ def db_create_file(file_name, owner_name):
         conn.close()
 
 
+
+
+def db_modify_file_contents(file_name, new_content):
+    # cncrypt the file name to match the encrypted version stored in the database
+    e_file_name = db_encrypt_data(file_name)
+    e_new_content = db_encrypt_data(new_content)  # Encrypt the new content
+    file_path = os.path.join(commands.pwd(), e_file_name)
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    try:
+        # Check if the file exists
+        cursor.execute("SELECT * FROM files WHERE file_name = ? AND file_path = ?", (e_file_name, file_path))
+        result = cursor.fetchone()
+        
+        if not result:
+            print(f"File {file_name} does not exist or you do not have permission to modify it.")
+            return
+        
+        # Update the file's content
+        cursor.execute(
+            '''UPDATE files
+               SET content = ?
+               WHERE file_path = ?''',
+            (e_new_content, file_path,)
+        )
+        
+        if cursor.rowcount == 0:
+            print(f"Failed to update {file_name}.")
+        else:
+            print(f"File {file_name} updated successfully.")
+        
+        conn.commit()
+    
+    except sqlite3.Error as e:
+        print(f"SQLite error: {e}")
+    
+    finally:
+        conn.close()
+
+    
+
+def db_modify_file_name(file_name, new_file_name):
+    # cncrypt the file name to match the encrypted version stored in the database
+    e_old_file_name = db_encrypt_data(file_name)
+    e_new_file_name = db_encrypt_data(new_file_name) 
+    old_file_path = os.path.join(commands.pwd(), e_old_file_name)
+    new_file_path = os.path.join(commands.pwd(), e_new_file_name)
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    try:
+        # Check if the file exists
+        cursor.execute("SELECT * FROM files WHERE file_name = ? AND file_path = ?", (e_old_file_name, old_file_path))
+        result = cursor.fetchone()
+        
+        if not result:
+            print(f"File {file_name} does not exist or you do not have permission to modify it.")
+            return
+        
+        # Update the file's name
+        cursor.execute(
+            '''UPDATE files
+               SET file_name = ?
+               WHERE file_path = ?''',
+            (e_new_file_name, old_file_path,)
+        )
+        
+        cursor.execute(
+            '''UPDATE files
+               SET file_path = ?
+               WHERE file_path = ?''',
+            (new_file_path, old_file_path,)
+        )
+
+        if cursor.rowcount == 0:
+            print(f"Failed to update {file_name}.")
+        else:
+            print(f"File {file_name} updated successfully.")
+        
+        conn.commit()
+    
+    except sqlite3.Error as e:
+        print(f"SQLite error: {e}")
+    
+    finally:
+        conn.close()
+
+
+
 def db_check_file_name_integrity(external_filename, file_path, username):
 
     conn = sqlite3.connect(db_path)
@@ -640,12 +732,15 @@ def db_check_file_name_integrity(external_filename, file_path, username):
     except sqlite3.Error as e:
         print("SQLite error:", e)
 
-def db_check_file_content_integrity(filename, external_filecontent, file_path, username):
-    
+
+
+def db_check_file_content_integrity(filename, external_filecontent, e_file_path, username):
+
+    e_external_filecontent = db_encrypt_data(external_filecontent)
+
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    print(f" arg: {external_filecontent}, {file_path}, {username}")
     try:
         cursor.execute(
             '''
@@ -653,17 +748,14 @@ def db_check_file_content_integrity(filename, external_filecontent, file_path, u
             FROM files
             WHERE file_path = ?
             ''', 
-            (file_path,)
+            (e_file_path,)
             )
         
-        db_encrypted_content = cursor.fetchone()
+        db_encrypted_content = cursor.fetchone()[0]
 
-        if db_encrypted_content:
-            if db_encrypted_content != db_encrypt_data(external_filecontent):
-                print(f"{filename}'s CONTENT has been modified by an external user!")
-                return
-        else:
-            print("no such file exists")
+        if db_encrypted_content != e_external_filecontent:
+            print(f"{filename}'s content has been modified by an external user!")
+            return
 
     except sqlite3.Error as e:
         print("SQLite error:", e)
