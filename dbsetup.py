@@ -385,30 +385,6 @@ def db_get_all_users():
 
     return userlist
 
-# def get_admin_keys():
-#     try:
-#         conn = sqlite3.connect(db_path)
-#         cursor = conn.cursor()
-
-#         admin_username = 'admin'  # Assuming the admin's username is 'admin'
-#         cursor.execute('SELECT private_key, public_key FROM users WHERE username = ?', (admin_username,))
-#         admin_keys = cursor.fetchone()
-
-#         if admin_keys:
-#             private_key = deserialize_private_key(admin_keys[0])
-#             public_key = deserialize_public_key(admin_keys[1])
-#             return private_key, public_key
-#         else:
-#             print("Admin user not found.")
-#             return None, None
-
-#     except sqlite3.Error as e:
-#         print(f"An error occurred: {e}")
-#         return None, None
-
-#     finally:
-#         conn.close()
-
 def db_add_group(group_name):
     if private_key and public_key:
         conn = sqlite3.connect(db_path)
@@ -510,65 +486,6 @@ def db_auth_user(username, password):
         conn.close()
 
     return None
-
-def db_create_session(user_id):
-
-    # init token
-    token = secrets.token_hex(16)
-
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-
-        cursor.execute(
-            '''
-            INSERT INTO sessions (user_id, token) 
-            VALUES (?, ?)
-            ''', 
-            (user_id, token)
-        )
-
-        conn.commit()
-
-    except sqlite3.Error as e:
-        print(f"error occurred: {e}")
-        token = None
-
-    finally:
-        conn.close()
-
-    return token
-
-
-
-def db_get_session_user_id(token):
-
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-
-        cursor.execute(
-            '''
-            SELECT user_id 
-            FROM sessions 
-            WHERE token = ?
-            ''', 
-            (token,)
-        )
-
-        session = cursor.fetchone()
-
-    except sqlite3.Error as e:
-        print(f"An error occurred: {e}")
-        session = None
-
-    finally:
-        conn.close()
-
-    if session:
-        return session[0]
-    else:
-        return None
 
 
 
@@ -755,26 +672,5 @@ def db_check_file_content_integrity(filename, external_filecontent, file_path, u
     except sqlite3.Error as e:
         print("SQLite error:", e)
 
-# testing
-if __name__ == '__main__':
-    init_db() # to init the db
-    yorn = input("add user? [y/n] >")
-    if yorn.lower() == 'y':
-        uu = input("u: ")
-        pp = input("p: ")
-        db_add_user(uu, pp)
 
-
-    for usern in db_get_all_users():
-        print(usern)
-
-    while True:
-        print("auth------------------------")
-        uname = input("username: ")
-        pw = input("password: ")
-        userAuth = db_auth_user(uname, pw)
-        if userAuth:
-            print("auth succeeded")
-            user_token = db_create_session(userAuth)
-            print("session created for user_id =",  db_get_session_user_id(user_token), " with token =", user_token )
 
