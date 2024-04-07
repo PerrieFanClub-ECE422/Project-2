@@ -2,11 +2,19 @@ import sqlite3
 from hashlib import sha256
 import secrets
 import commands
-from utils import decrypt_with_private_key, deserialize_private_key, deserialize_public_key, encrypt_with_public_key, generate_key_pair, serialize_private_key, serialize_public_key
+from utils import generate_key_pair
 import os
+
+from cryptography.fernet import Fernet
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import hashes
 # global vars
 db_path= os.getcwd() + '/sfs.db'
 ROOT_PARENT_ID = 0
+private_key, public_key = generate_key_pair()
 
 def init_db():
 
@@ -22,24 +30,18 @@ def init_db():
             user_id INTEGER PRIMARY KEY,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
-            group_name TEXT,
-            private_key BLOB,
-            public_key BLOB,           
+            group_name TEXT,   
             FOREIGN KEY(group_name) REFERENCES groups(name)
         )
         '''
     )
-
-
 
     # groups table
     cursor.execute(
         '''
         CREATE TABLE IF NOT EXISTS groups (
             group_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            group_name TEXT UNIQUE NOT NULL,
-            owner_id INTEGER NOT NULL,
-            FOREIGN KEY (owner_id) REFERENCES users (user_id)
+            group_name TEXT UNIQUE NOT NULL
         )
         '''
     )
@@ -155,22 +157,29 @@ def db_check_user_exists(username):
     finally:
         conn.close()
 
-def db_encrypt_data(data,username):
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute('SELECT public_key FROM users WHERE username = ?', (username.lower(),))
-    public_key_data = cursor.fetchone()[0]
-    public_key = deserialize_public_key(public_key_data)
-    encrypted_data = encrypt_with_public_key(public_key, data.encode())
+def db_encrypt_data(plaintext):
+
+    encrypted_data = public_key.encrypt(
+        plaintext.encode('utf-8'),
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+
     return encrypted_data
 
-def db_decrypt_data(data, username): 
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute('SELECT private_key FROM users WHERE username = ?', (username.lower(),))
-    private_key_data = cursor.fetchone()[0]
-    private_key = deserialize_private_key(private_key_data)
-    decrypted_data = decrypt_with_private_key(private_key, data)
+def db_decrypt_data(encrypted_data): 
+    decrypted_data = private_key.decrypt(
+        encrypted_data,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+
     return decrypted_data.decode()
 
 def db_get_directory_perms(owner_id, dir_name, dir_path):
@@ -376,39 +385,38 @@ def db_get_all_users():
 
     return userlist
 
-def get_admin_keys():
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+# def get_admin_keys():
+#     try:
+#         conn = sqlite3.connect(db_path)
+#         cursor = conn.cursor()
 
-        admin_username = 'admin'  # Assuming the admin's username is 'admin'
-        cursor.execute('SELECT private_key, public_key FROM users WHERE username = ?', (admin_username,))
-        admin_keys = cursor.fetchone()
+#         admin_username = 'admin'  # Assuming the admin's username is 'admin'
+#         cursor.execute('SELECT private_key, public_key FROM users WHERE username = ?', (admin_username,))
+#         admin_keys = cursor.fetchone()
 
-        if admin_keys:
-            private_key = deserialize_private_key(admin_keys[0])
-            public_key = deserialize_public_key(admin_keys[1])
-            return private_key, public_key
-        else:
-            print("Admin user not found.")
-            return None, None
+#         if admin_keys:
+#             private_key = deserialize_private_key(admin_keys[0])
+#             public_key = deserialize_public_key(admin_keys[1])
+#             return private_key, public_key
+#         else:
+#             print("Admin user not found.")
+#             return None, None
 
-    except sqlite3.Error as e:
-        print(f"An error occurred: {e}")
-        return None, None
+#     except sqlite3.Error as e:
+#         print(f"An error occurred: {e}")
+#         return None, None
 
-    finally:
-        conn.close()
+#     finally:
+#         conn.close()
 
 def db_add_group(group_name):
-    private_key, public_key = get_admin_keys()
     if private_key and public_key:
         conn = sqlite3.connect(db_path)
         try:
             cursor = conn.cursor()
 
             # Encrypt the group name using the admin's public key
-            encrypted_group_name = encrypt_with_public_key(public_key, group_name.encode('utf-8'))
+            encrypted_group_name = db_encrypt_data(group_name)
 
             # Insert the encrypted group name into the groups table
             cursor.execute('INSERT INTO groups (group_name) VALUES (?)', (encrypted_group_name,))
@@ -432,7 +440,7 @@ def db_get_existing_groups():
 
     conn.close()
 
-    return [db_decrypt_data(group[0], "admin") for group in groups]
+    return [db_decrypt_data(group[0]) for group in groups]
 
 def db_assign_user_to_groups(username, selected_groups):
     conn = sqlite3.connect(db_path)
@@ -452,17 +460,9 @@ def db_add_user(username, password, group_name=None):
 
         # hash the pw with sha256
         password_hash = sha256(password.encode()).hexdigest()
-        # Generate RSA key pair for the admin user
-        private_key, public_key = generate_key_pair()
 
-        # Serialize the public and private keys
-        serialized_public_key = serialize_public_key(public_key)
-        serialized_private_key = serialize_private_key(private_key)
-        # attempt to add user
-        if username.lower() == "admin":
-            cursor.execute("INSERT INTO users (username, password_hash, group_name, private_key, public_key) VALUES (?, ?, ?, ?, ?)", (username, password_hash, group_name, serialized_private_key, serialized_public_key))
-        else:
-            cursor.execute("INSERT INTO users (username, password_hash, group_name, private_key, public_key) VALUES (?, ?, ?, ?, ?)", (username, password_hash, group_name, None, None))
+        cursor.execute("INSERT INTO users (username, password_hash, group_name) VALUES (?, ?, ?)", (username, password_hash, group_name))
+
 
         # Commit changes
         conn.commit()
@@ -699,34 +699,6 @@ def db_create_file(file_name, owner_name):
         conn.close()
     # populate files database with name, hashed name, owner id, permission type, content = empty for now
 
-def get_private_key(username):
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute("SELECT private_key FROM users WHERE username=?", (username,))
-    row = cursor.fetchone()
-    conn.close()
-
-    if row:
-        serialized_private_key = row[0]
-        private_key = deserialize_private_key(serialized_private_key)
-        return private_key
-    else:
-        return None
-
-
-def get_public_key(username):
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute("SELECT public_key FROM users WHERE username=?", (username,))
-    row = cursor.fetchone()
-    conn.close()
-
-    if row:
-        serialized_public_key = row[0]
-        public_key = deserialize_public_key(serialized_public_key)
-        return public_key
-    else:
-        return None
 
 def db_check_file_name_integrity(external_filename, file_path, username):
 
@@ -746,7 +718,7 @@ def db_check_file_name_integrity(external_filename, file_path, username):
         db_encrypted_name = cursor.fetchone()
 
         if db_encrypted_name:
-            if db_encrypted_name != db_encrypt_data(external_filename, username):
+            if db_encrypted_name != db_encrypt_data(external_filename):
                 print(f"{external_filename}'s name has been modified by an external user!")
                 return
         else:
@@ -774,7 +746,7 @@ def db_check_file_content_integrity(filename, external_filecontent, file_path, u
         db_encrypted_content = cursor.fetchone()
 
         if db_encrypted_content:
-            if db_encrypted_content != db_encrypt_data(external_filecontent, username):
+            if db_encrypted_content != db_encrypt_data(external_filecontent):
                 print(f"{filename}'s CONTENT has been modified by an external user!")
                 return
         else:
