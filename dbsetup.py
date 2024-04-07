@@ -207,9 +207,8 @@ def db_get_file_perms(file_name, file_path):
         )
 
         file_perms = cursor.fetchone()
-
         if file_perms:
-            return file_perms
+            return db_decrypt_data(file_perms[0])
         else:
             return None
 

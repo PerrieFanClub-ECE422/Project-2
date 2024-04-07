@@ -62,7 +62,7 @@ def cd(current_directory, current_user_name, target_directory): # change dir
 
     if main.check_directory_perms(current_user_name, e_dir_name, dir_path):
         os.chdir(dir_path)
-    elif not os.path.exists(dir_path):
+    elif not os.path.exists(target_directory):
         print(f"No directory {target_directory} exists")
     else:
         print(f"No access to directory {target_directory}")
