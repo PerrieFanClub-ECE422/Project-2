@@ -10,7 +10,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding
-
+import binascii
 # global vars
 db_path= os.getcwd() + '/sfs.db'
 private_key = None
@@ -78,7 +78,7 @@ def init_db():
             ) 
             VALUES (?, ?, ?, ?)
         ''', 
-        (db_encrypt_data("root"), 0, db_encrypt_data("root"), db_encrypt_data("all"))
+        ("root", 0, "root", db_encrypt_data("all"))
     )
 
     new_dir_path = os.path.join(os.getcwd(), "root")
@@ -155,7 +155,7 @@ def db_encrypt_data(plaintext):
     return encrypted_hex
 
 def db_decrypt_data(encrypted_data): 
-    # Decode the hexadecimal encoded encrypted data
+    #TODO: REFERENCE OR REYNEL GETS EXPELLED
     encrypted_data = binascii.unhexlify(encrypted_data.encode('utf-8'))
 
     cipher = Cipher(algorithms.AES(AES_KEY), modes.CBC(b'0000000000000000'), backend=default_backend())
@@ -168,7 +168,7 @@ def db_decrypt_data(encrypted_data):
     return decrypted_data.decode('utf-8')
 
 
-def db_get_directory_perms(owner_id, dir_name, dir_path):
+def db_get_directory_perms(dir_name, dir_path):
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -176,28 +176,23 @@ def db_get_directory_perms(owner_id, dir_name, dir_path):
             '''
             SELECT permissions 
             FROM directories 
-            WHERE owner_id = ? 
-            AND dir_name = ? 
+            WHERE dir_name = ? 
             AND dir_path = ?
             ''', 
-            (owner_id, db_encrypt_data(dir_name), db_encrypt_data(dir_path))
+            (dir_name, dir_path)
         )
 
-        #TODO: Incompatible with multiple groups because dir_perms returns tuple
         dir_perms = cursor.fetchone()
-
         if dir_perms:
             return db_decrypt_data(dir_perms[0])
         else:
-            print("No dir perms found")
             return None
 
     except sqlite3.Error as e:
         print(f"Database error: {e} get directory perms")
 
 
-def db_get_file_perms(owner_id, file_name, file_path):
-    print(owner_id, file_name, file_path)
+def db_get_file_perms(file_name, file_path):
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -205,20 +200,17 @@ def db_get_file_perms(owner_id, file_name, file_path):
             '''
             SELECT permissions 
             FROM files 
-            WHERE owner_id = ? 
-            AND real_name = ? 
+            WHERE file_name = ?
             AND file_path = ?
             ''', 
-            (owner_id, file_name, file_path)
+            (file_name, file_path)
         )
 
         file_perms = cursor.fetchone()
 
         if file_perms:
-            print("File perms found! ", file_perms)
             return file_perms
         else:
-            print("No file perms found, ", file_perms)
             return None
 
     except sqlite3.Error as e:
@@ -237,7 +229,7 @@ def db_get_directory_id(dir_name, dir_path):
             WHERE dir_name = ? 
             AND dir_path = ?
             ''', 
-            (db_encrypt_data(dir_name), db_encrypt_data(dir_path))
+            (db_encrypt_data(dir_name), dir_path)
         )
         dir_id = cursor.fetchone()
 
@@ -265,7 +257,7 @@ def db_get_directory_owner(dir_name, dir_path):
             WHERE dir_name = ? 
             AND dir_path = ? 
             ''', 
-            (db_encrypt_data(dir_name), db_encrypt_data(dir_path))
+            (dir_name, dir_path)
         )
 
         dir_owner_id = cursor.fetchone()
@@ -291,16 +283,16 @@ def db_get_file_owner(file_name, file_path):
             '''
             SELECT owner_id 
             FROM files 
-            WHERE real_name = ? 
+            WHERE file_name = ? 
             AND file_path = ? 
             ''', 
             (file_name, file_path)
         )
 
-        file_owner_id = cursor.fetchone()[0]
+        file_owner_id = cursor.fetchone()
 
-        if file_owner_id is not None:
-            return file_owner_id
+        if file_owner_id:
+            return file_owner_id[0]
         else:
             return None
 
@@ -485,14 +477,14 @@ def db_auth_user(username, password):
 
 
 def db_create_directory(dir_name, owner_name):
-
+    e_dir_name = db_encrypt_data(dir_name)
     owner_id = db_get_user_id(owner_name)
-    new_dir_path = os.path.join(commands.pwd(), dir_name)
+    new_dir_path = os.path.join(commands.pwd(), e_dir_name)
 
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT * FROM directories WHERE dir_name = ? AND dir_path = ?", (db_encrypt_data(dir_name), db_encrypt_data(new_dir_path)))
+        cursor.execute("SELECT * FROM directories WHERE dir_name = ? AND dir_path = ?", (e_dir_name, new_dir_path))
         result = cursor.fetchone()
         if result is not None:
             print("Directory already exists")
@@ -508,7 +500,7 @@ def db_create_directory(dir_name, owner_name):
                     )
                     VALUES (?, ?, ?, ?)
                     ''', 
-                    (db_encrypt_data(dir_name), owner_id, db_encrypt_data(new_dir_path), db_encrypt_data("owner"))
+                    (e_dir_name, owner_id, new_dir_path, db_encrypt_data("owner"))
                 )
 
             conn.commit()
@@ -582,13 +574,13 @@ def change_permissions(name, group_names, fileflag):
 
 def db_create_file(file_name, owner_name):
     #TODO: encrypt info in function caller, decrypt info here
-
+    e_file_name = db_encrypt_data(file_name)
     owner_id = db_get_user_id(owner_name)
-    new_file_path = os.path.join(commands.pwd(), file_name)
+    new_file_path = os.path.join(commands.pwd(), e_file_name)
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT * FROM files WHERE file_name = ? AND file_path = ?", (db_encrypt_data(file_name), db_encrypt_data(new_file_path)))
+        cursor.execute("SELECT * FROM files WHERE file_name = ? AND file_path = ?", (e_file_name, new_file_path))
         result = cursor.fetchone()
         if result is not None:
             print("File already exists")
@@ -603,7 +595,7 @@ def db_create_file(file_name, owner_name):
                     content) 
                     VALUES (?, ?, ?, ?, ?)
                     ''', 
-                    (db_encrypt_data(file_name), owner_id, db_encrypt_data(new_file_path), db_encrypt_data("owner"), db_encrypt_data(""))
+                    (e_file_name, owner_id, new_file_path, db_encrypt_data("owner"), db_encrypt_data(""))
                 )
 
         

@@ -72,7 +72,7 @@ def register():
 
     if result:
         print("registration succeeded")
-        commands.mkdir(username.lower(), username.lower())
+        commands.mkdir(username, username)
 
 def create_group_prompt():
     group_name = input("Enter group name: ")
@@ -116,8 +116,7 @@ def file_system(current_user_name):
                     os.chdir(parentdir)
 
                 else: 
-                    # os.path.join(os.getcwd(), cmd[1]) == new_dir_path in commands.mkdir()
-                    commands.cd(os.path.join(os.getcwd(), cmd[1]), current_user_name, cmd[1])
+                    commands.cd(os.getcwd(), current_user_name, cmd[1])
 
         elif cmd[0] == "pwd": # ----------------------------------------------- pwd
             print("Current Directory: ",commands.pwd())
@@ -135,12 +134,10 @@ def file_system(current_user_name):
                 dir_path = commands.pwd()
                 dir_name = os.path.basename(dir_path)
                 
-                e_dir_path = dbsetup.db_encrypt_data(dir_path)
-                e_dir_name = dbsetup.db_encrypt_data(dir_name)
-                e_user_name = dbsetup.db_encrypt_data(current_user_name)
-
-                if check_directory_perms(e_user_name, e_dir_name, e_dir_path): 
+                if check_directory_perms(current_user_name, dir_name, dir_path): 
                      commands.touch(cmd[1], current_user_name)
+                else: 
+                    print(f"{current_user_name}:No permission to access directory")
         
         elif cmd[0] == "mkdir": # ----------------------------------------------- mkdir
             if len(cmd) < 2:
@@ -149,12 +146,11 @@ def file_system(current_user_name):
                 dir_path = commands.pwd()
                 dir_name = os.path.basename(dir_path)
 
-                e_dir_path = dbsetup.db_encrypt_data(dir_path)
-                e_dir_name = dbsetup.db_encrypt_data(dir_name)
-                e_user_name = dbsetup.db_encrypt_data(current_user_name)
-
-                if check_directory_perms(e_user_name, e_dir_name, e_dir_path):
+                if check_directory_perms(current_user_name, dir_name, dir_path):
                     commands.mkdir(cmd[1], current_user_name)
+                else: 
+                    print(f"{current_user_name}:No permission to access directory")
+
         
         elif cmd[0] == "cat": # ----------------------------------------------- cat
             if len(cmd) < 2:
@@ -200,64 +196,54 @@ def file_system(current_user_name):
 
 
 def check_file_perms(curruser, file_name, file_path):
-
     if curruser == "":
-        print(f"{curruser}:No permission to access directory")
+        print(f"{curruser}:No permission to access file")
         return False
     else:
 
-        owner_id = dbsetup.db_get_user_id(curruser)
-        file_perms = dbsetup.db_get_file_perms(owner_id, file_name, file_path)
+        curruser_id = dbsetup.db_get_user_id(curruser)
+        file_perms = dbsetup.db_get_file_perms(file_name, file_path)
         file_owner_id = dbsetup.db_get_file_owner(file_name, file_path)
-
-        if file_perms == None:
-            print(f"No access to file {file_name}")
-            return False
-        else:
-            if owner_id == file_owner_id:
+        if file_perms:
+            if file_perms == "owner" and (curruser_id == file_owner_id):
+                return True
+            elif file_perms == "owner" and (curruser_id != file_owner_id):
                 return True
             elif file_perms[0] == "all":
                 return True
+            elif dbsetup.db_check_user_in_group(curruser, file_perms):
+                return True
             else:
                 return False
+        else:
+            return False
 
-
-def check_directory_perms(e_user_name, e_dir_name, e_dir_path):
+def check_directory_perms(curruser, dir_name, dir_path):
     """
     Args:
     dir_name: name of the folder(directory) that you wish to check perms for
     dir_path: unique path of the folder(directory) that you wish to check perms for
     """
-    #TODO: figure out how we plan on adding info to user_file_permissions and user_directory_permissions
-    #TODO: figre out how to get ID of current directory and selected file
-
-
-    dir_path = dbsetup.db_decrypt_data(e_dir_path)
-    dir_name = dbsetup.db_decrypt_data(e_dir_name)
-    curruser = dbsetup.db_decrypt_data(e_user_name)
-
-
     if curruser == "":
-        print(f"{curruser}:No permission to access directory")
         return False
     else:
-        owner_id = dbsetup.db_get_user_id(curruser)
-        dir_perms = dbsetup.db_get_directory_perms(owner_id, dir_name, dir_path)
+        curruser_id = dbsetup.db_get_user_id(curruser)
+        dir_perms = dbsetup.db_get_directory_perms(dir_name, dir_path)
         dir_owner_id = dbsetup.db_get_directory_owner(dir_name, dir_path)
-        
-        if not dir_perms:
-            print(f"No access to directory {dir_name}")
+    
+    if dir_perms:
+        if dir_perms == "owner" and (curruser_id == dir_owner_id):
+            return True
+        elif dir_perms == "owner" and (curruser_id != dir_owner_id):
             return False
+        elif dir_perms[0] == "all":
+            return True
+        elif dbsetup.db_check_user_in_group(curruser, dir_perms):
+            return True
         else:
-            if owner_id == dir_owner_id:
-                return True
-            elif dir_perms[0] == "all":
-                return True
-            elif dbsetup.db_check_user_in_group(curruser, dir_perms):
-                return True
-            else:
-                return False
-
+            return False
+    else: 
+        return False
 
 
     return True

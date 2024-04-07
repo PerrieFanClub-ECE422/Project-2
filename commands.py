@@ -10,12 +10,28 @@ def pwd(): # see current directory
 
 
 ROOT_DIR_SHORT = os.path.dirname(os.path.abspath(__file__))
+
+def decrypt_sfs_path(path):
+    # Split the path into segments
+    segments = path.split(os.sep)
+    
+    # Find the index of "root" in the segments
+    root_index = segments.index("root")
+    
+    # Encrypt the segments after "root"
+    decrypted_segments = [dbsetup.db_decrypt_data(segment) for segment in segments[root_index + 1:]]
+    
+    # Join the encrypted segments back together
+    encrypted_path = os.sep.join(segments[:root_index + 1] + decrypted_segments)
+    
+    return encrypted_path
+
 def pwd_short():
     curdirshort = os.getcwd()
     # Make the path relative to ROOT_DIR_SHORT if within it
     if curdirshort.startswith(ROOT_DIR_SHORT):
         display_dir_short = curdirshort.replace(ROOT_DIR_SHORT, "").lstrip(os.sep)
-        display_dir_short = os.sep + display_dir_short if display_dir_short else "root"
+        display_dir_short = os.sep + decrypt_sfs_path(display_dir_short) if display_dir_short else "root"
     else:
         # Fallback in case the current dir is outside ROOT_DIR_SHORT
         display_dir_short = curdirshort  
@@ -23,20 +39,13 @@ def pwd_short():
 
 
 
-# old version
-# def ls(): # list directory
-#     files = os.listdir('.')
-#     for file in files: 
-#         print(file, end="  ")
-
 def ls(username, dir_path):
     try:
-        e_username = dbsetup.db_encrypt_data(username)
         files = os.listdir(dir_path)
         for file in files:
-            if main.check_directory_perms(e_username, file, dir_path) or main.check_file_perm(username, dir_path): 
-                print(dbsetup.db_decrypt_data(file))
-            else: 
+            if main.check_directory_perms(username, file, os.path.join(dir_path,file)) or main.check_file_perms(username, file, os.path.join(dir_path,file)):
+                print(dbsetup.db_decrypt_data(file), end="  ")
+            else:
                 print(file, end="  ")
         print()
     except FileNotFoundError:
@@ -47,36 +56,31 @@ def ls(username, dir_path):
         print(f"Error: {e}")
 
 
-def cd(directory, current_user_name, dir_name): # change dir
-    dir_path = os.path.join(pwd(), dir_name)
+def cd(current_directory, current_user_name, target_directory): # change dir
+    e_dir_name=dbsetup.db_encrypt_data(target_directory)
+    dir_path = os.path.join(current_directory, e_dir_name)
 
-    e_dir_path = dbsetup.db_encrypt_data(dir_path)
-    e_dir_name = dbsetup.db_encrypt_data(dir_name)
-    e_user_name = dbsetup.db_encrypt_data(current_user_name)
-
-    if not os.path.exists(dir_path):
-        print(f"No directory {dir_name} exists")
-        return
-    elif main.check_directory_perms(e_user_name, e_dir_name, e_dir_path):
-        os.chdir(directory)
+    if main.check_directory_perms(current_user_name, e_dir_name, dir_path):
+        os.chdir(dir_path)
+    elif not os.path.exists(dir_path):
+        print(f"No directory {target_directory} exists")
     else:
-        print(f"No access to directory {dir_name}")
+        print(f"No access to directory {target_directory}")
 
     return 
 
-def mkdir(new_dir, owner_name): # make new subdir in current directory on disk
-    current_dir = os.getcwd()
-    e_new_dir = dbsetup.db_encrypt_data(new_dir)
-    e_current_dir = dbsetup.db_encrypt_data(current_dir)
 
+def mkdir(new_dir, owner_name):
+    e_new_dir = dbsetup.db_encrypt_data(new_dir)
+    print(e_new_dir)
     # Create a new directory inside the current directory
-    new_dir_path = os.path.join(current_dir, new_dir)
+    new_dir_path = os.path.join(os.getcwd(), e_new_dir)
+    print("new_dir_path", new_dir_path)
     os.mkdir(new_dir_path)
     #create a new directory for the user in database
 
     dbsetup.db_create_directory(dbsetup.db_decrypt_data(e_new_dir), owner_name)
 
-    return 
 
 def touch(file_name, owner_name): # create a new file (txt)
 
@@ -88,10 +92,10 @@ def touch(file_name, owner_name): # create a new file (txt)
             # If it doesn't exist, create file
             with open(e_file_name, 'w'):
                 pass
-            dbsetup.db_create_file(dbsetup.db_decrypt_data(e_file_name), owner_name)
-            print(f"File '{e_file_name}' created successfully.")
+            dbsetup.db_create_file(file_name, owner_name)
+            print(f"File '{file_name}' created successfully.")
         else:
-            print(f"File '{e_file_name}' already exists!")
+            print(f"File '{file_name}' already exists!")
 
     except Exception as e:
         print("Error:", e)
