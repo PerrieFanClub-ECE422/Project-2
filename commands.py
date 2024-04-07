@@ -57,12 +57,15 @@ def cd(directory, current_user_name, dir_name): # change dir
 
 def mkdir(new_dir, owner_name): # make new subdir in current directory on disk
     current_dir = os.getcwd()
+    e_new_dir = dbsetup.db_encrypt_data(new_dir)
+    e_current_dir = dbsetup.db_encrypt_data(current_dir)
 
     # Create a new directory inside the current directory
     new_dir_path = os.path.join(current_dir, new_dir)
     os.mkdir(new_dir_path)
     #create a new directory for the user in database
-    dbsetup.db_create_directory(new_dir, owner_name)
+
+    dbsetup.db_create_directory(dbsetup.db_decrypt_data(e_new_dir), owner_name)
 
     return 
 
@@ -122,5 +125,5 @@ def mv(file_name, new_name): #rename a file
         print(f"Error: {e}")
 
 def chmod(flag, mode, file_name):
-    
+
     return
