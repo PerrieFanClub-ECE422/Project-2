@@ -20,7 +20,6 @@ public_key = None
 AES_KEY = b'0123456789abcdef0123456789abcdef'
 
 def init_global_keys():
-    print("-----------------------------GENERATING KEYS-----------------------------")
     global private_key, public_key
     private_key, public_key = generate_key_pair()
 
@@ -96,8 +95,7 @@ def init_db():
         '''
         CREATE TABLE IF NOT EXISTS files (
             file_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            real_name TEXT NOT NULL,
-            encrypted_name TEXT,
+            file_name TEXT NOT NULL,
             owner_id INTEGER NOT NULL,
             file_path TEXT NOT NULL,
             permissions TEXT NOT NULL,
@@ -186,10 +184,12 @@ def db_get_directory_perms(owner_id, dir_name, dir_path):
             ''', 
             (owner_id, db_encrypt_data(dir_name), db_encrypt_data(dir_path))
         )
+
+        #TODO: Incompatible with multiple groups because dir_perms returns tuple
         dir_perms = cursor.fetchone()
 
         if dir_perms:
-            return db_decrypt_data(dir_perms)
+            return db_decrypt_data(dir_perms[0])
         else:
             print("No dir perms found")
             return None
@@ -270,10 +270,10 @@ def db_get_directory_owner(dir_name, dir_path):
             (db_encrypt_data(dir_name), db_encrypt_data(dir_path))
         )
 
-        dir_owner_id = cursor.fetchone()[0]
+        dir_owner_id = cursor.fetchone()
 
-        if dir_owner_id is not None:
-            return dir_owner_id
+        if dir_owner_id:
+            return dir_owner_id[0]
         else:
             return None
 
@@ -325,8 +325,6 @@ def db_get_user_id(username):
             ''', 
             (db_encrypt_data(username),)
         )
-        print(username)
-        print(db_encrypt_data(username))
         user_id = cursor.fetchone()[0]
 
         if user_id is not None:
@@ -440,7 +438,7 @@ def db_add_user(username, password, group_name=None):
 
         # Commit changes
         conn.commit()
-
+        return True
     except sqlite3.IntegrityError:
         print("error - username already exists")
         return False
@@ -589,28 +587,33 @@ def db_create_file(file_name, owner_name):
 
     owner_id = db_get_user_id(owner_name)
     new_file_path = os.path.join(commands.pwd(), file_name)
-    print(db_path)
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     try:
-        #TODO: possibly make sure that owner_id is referencing the tables correctly
-        cursor.execute(
-            '''INSERT INTO files (
-                real_name, 
-                encrypted_name, 
-                owner_id, 
-                file_path,
-                permissions, 
-                content) 
-                VALUES (?, ?, ?, ?, ?, ?)
-                ''', 
-                (file_name, db_encrypt_data(file_name), owner_id, new_file_path, "owner", "filler content")
-            )
+        cursor.execute("SELECT * FROM files WHERE file_name = ? AND file_path = ?", (db_encrypt_data(file_name), db_encrypt_data(new_file_path)))
+        result = cursor.fetchone()
+        if result is not None:
+            print("File already exists")
+            return  # Entry exists
+        else:
+            cursor.execute(
+                '''INSERT INTO files (
+                    file_name, 
+                    owner_id, 
+                    file_path,
+                    permissions, 
+                    content) 
+                    VALUES (?, ?, ?, ?, ?)
+                    ''', 
+                    (db_encrypt_data(file_name), owner_id, db_encrypt_data(new_file_path), db_encrypt_data("owner"), db_encrypt_data(""))
+                )
 
         
         print(f"File {file_name} created by {owner_name}")
 
         conn.commit()
+
+
     except sqlite3.Error as e:
         print("SQLite error:", e)
         return None
@@ -618,7 +621,6 @@ def db_create_file(file_name, owner_name):
 
     finally:
         conn.close()
-    # populate files database with name, hashed name, owner id, permission type, content = empty for now
 
 
 def db_check_file_name_integrity(external_filename, file_path, username):

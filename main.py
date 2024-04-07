@@ -10,9 +10,6 @@ db_path = os.getcwd() + "/sfs.db"
 def main():
     
     print("\nWelcome to the PERRIEFANCLUB SFS :)")
-
-    print("once", dbsetup.db_encrypt_data("TEST"))
-    print("twice", dbsetup.db_encrypt_data("TEST"))
     dbsetup.init_db()  # Initialize the database and tables if they don't exist
     cmds = "\n[1]Login \t[2]Register \t[3]Create Group \t[4]Exit"
     while True:
@@ -67,8 +64,8 @@ def register():
             selected_groups = [g.strip() for g in group_names.split(",")]
             valid_group_names = [g for g in selected_groups if g in listgroups]
             invalid_groups = [g for g in selected_groups if g not in listgroups]
-        if invalid_groups:
-            print("Non-existing group names: ", ", ".join(invalid_groups))
+            if invalid_groups:
+                print("Non-existing group names: ", ", ".join(invalid_groups))
             
     group_name = ",".join(valid_group_names) if valid_group_names else None
     result = dbsetup.db_add_user(username.lower(), password, group_name)
@@ -118,7 +115,8 @@ def file_system(current_user_name):
                     parentdir = os.path.dirname(curdir)
                     os.chdir(parentdir)
 
-                else:   
+                else: 
+                    # os.path.join(os.getcwd(), cmd[1]) == new_dir_path in commands.mkdir()
                     commands.cd(os.path.join(os.getcwd(), cmd[1]), current_user_name, cmd[1])
 
         elif cmd[0] == "pwd": # ----------------------------------------------- pwd
@@ -134,7 +132,15 @@ def file_system(current_user_name):
             if len(cmd) < 2:
                 print("please specify a file name")
             else:
-                commands.touch(cmd[1], current_user_name)
+                dir_path = commands.pwd()
+                dir_name = os.path.basename(dir_path)
+                
+                e_dir_path = dbsetup.db_encrypt_data(dir_path)
+                e_dir_name = dbsetup.db_encrypt_data(dir_name)
+                e_user_name = dbsetup.db_encrypt_data(current_user_name)
+
+                if check_directory_perms(e_user_name, e_dir_name, e_dir_path): 
+                     commands.touch(cmd[1], current_user_name)
         
         elif cmd[0] == "mkdir": # ----------------------------------------------- mkdir
             if len(cmd) < 2:
@@ -196,8 +202,6 @@ def check_file_perms(curruser, file_name, file_path):
         return False
     else:
 
-
-
         owner_id = dbsetup.db_get_user_id(curruser)
         file_perms = dbsetup.db_get_file_perms(owner_id, file_name, file_path)
         file_owner_id = dbsetup.db_get_file_owner(file_name, file_path)
@@ -237,7 +241,7 @@ def check_directory_perms(e_user_name, e_dir_name, e_dir_path):
         dir_perms = dbsetup.db_get_directory_perms(owner_id, dir_name, dir_path)
         dir_owner_id = dbsetup.db_get_directory_owner(dir_name, dir_path)
         
-        if dir_perms == None:
+        if not dir_perms:
             print(f"No access to directory {dir_name}")
             return False
         else:
