@@ -137,11 +137,13 @@ def cat(file_name): #read a file
 def echo(file_name, content): #write to a file
     e_file_name = dbsetup.db_encrypt_data(file_name)
     try:
-        # open the file to write/overwrite
-        with open(e_file_name, 'w') as file:
-            file.write(dbsetup.db_encrypt_data(content))
-            dbsetup.db_modify_file_contents(file_name, content)
-            print(f"Content written to '{file_name}'")
+        if not os.path.exists(e_file_name):
+            print(f"No file {file_name} exists.")
+        else: # open the file to write/overwrite
+            with open(e_file_name, 'w') as file:
+                file.write(dbsetup.db_encrypt_data(content))
+                dbsetup.db_modify_file_contents(file_name, content)
+                print(f"Content written to '{file_name}'")
         
         #TODO: CHANGE IN DB
     except Exception as e:

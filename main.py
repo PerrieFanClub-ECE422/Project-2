@@ -176,7 +176,8 @@ def file_system(current_user_name):
             if len(cmd) < 3:
                 print("please specify both a file name and contents to write")
             else:
-                commands.echo(cmd[1], cmd[2])
+                input_string = ' '.join(cmd[2:])
+                commands.echo(cmd[1], input_string)
         
         elif cmd[0] == "mv": # ----------------------------------------------- mv
             if len(cmd) < 3:
