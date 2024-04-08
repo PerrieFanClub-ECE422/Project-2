@@ -88,6 +88,7 @@ def file_system(current_user_name):
     pwd       => display current path   >> pwd
     ls        => list all items         >> ls 
     touch     => create new file        >> touch  [filename]
+    rm        => remove file            >> rm     [filename]
     mkdir     => create new directory   >> mkdir  [direcname]
     cat       => read file contents     >> cat    [filename]
     echo      => write file contents    >> echo   [filename]  [contents]
@@ -139,6 +140,19 @@ def file_system(current_user_name):
                 else: 
                     print(f"{current_user_name}:No permission to access directory")
         
+        elif cmd[0] == "rm": # ----------------------------------------------- touch
+            if len(cmd) < 2:
+                print("please specify a file name")
+            else:
+                dir_path = commands.pwd()
+                e_file_name = dbsetup.db_encrypt_data(cmd[1])
+                
+                print(os.path.join(dir_path, cmd[1]), e_file_name)
+                if check_file_perms(current_user_name, e_file_name, os.path.join(dir_path, e_file_name)): 
+                    commands.rm(cmd[1], current_user_name)
+                else: 
+                    print(f"{current_user_name}:No permission to access file")
+
         elif cmd[0] == "mkdir": # ----------------------------------------------- mkdir
             if len(cmd) < 2:
                 print("please specify a directory name")

@@ -103,6 +103,23 @@ def touch(file_name, owner_name): # create a new file (txt)
 
     return 
 
+def rm(file_name, owner_name): #delete file
+    e_file_name = dbsetup.db_encrypt_data(file_name)
+
+    try:
+        # Check if the file already exists
+        if os.path.exists(e_file_name):
+            # If it doesn't exist, create file
+            os.remove(e_file_name)
+            dbsetup.db_delete_file(file_name, owner_name)
+            print(f"File '{file_name}' deleted successfully.")
+        else:
+            print(f"File '{file_name}' does not exist!")
+
+    except Exception as e:
+        print("Error:", e)
+
+
 def cat(file_name): #read a file
     e_file_name = dbsetup.db_encrypt_data(file_name)
 
