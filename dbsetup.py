@@ -540,7 +540,7 @@ def change_permissions(name, group_names, fileflag):
         if not fileflag:
             cursor.execute("SELECT dir_id FROM directories WHERE dir_name = ?", (db_encrypt_data(name),))
         else: 
-            cursor.execute("SELECT file_id FROM files WHERE encrypted_name = ?", (db_encrypt_data(name),))
+            cursor.execute("SELECT file_id FROM files WHERE file_name = ?", (db_encrypt_data(name),))
         
         id = cursor.fetchone()
         if id:            
