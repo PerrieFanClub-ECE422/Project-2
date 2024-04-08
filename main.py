@@ -309,7 +309,7 @@ def check_integrity(directory, e_username):
                     break  
 
             with open(f_path, 'r') as fi:
-                e_content = dbsetup.db_encrypt_data(fi.read())
+                e_content = fi.read()
                 dbsetup.db_check_file_content_integrity(e_file_name, e_content, f_path, e_username)
         for e_dir_name in dirs:
             d_path = os.path.join(root, e_dir_name)

@@ -90,6 +90,7 @@ def touch(file_name, owner_name): # create a new file (txt)
         if not os.path.exists(e_file_name):
             # If it doesn't exist, create file
             with open(e_file_name, 'w'):
+                e_file_name.write(dbsetup.db_encrypt_data(""))
                 pass
             dbsetup.db_create_file(file_name, owner_name)
             print(f"File '{file_name}' created successfully.")
@@ -145,7 +146,6 @@ def echo(file_name, content): #write to a file
                 dbsetup.db_modify_file_contents(file_name, content)
                 print(f"Content written to '{file_name}'")
         
-        #TODO: CHANGE IN DB
     except Exception as e:
         print(f"Error: {e}")
 
