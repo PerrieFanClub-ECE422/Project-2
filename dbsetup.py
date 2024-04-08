@@ -313,10 +313,10 @@ def db_get_user_id(username):
             ''', 
             (db_encrypt_data(username),)
         )
-        user_id = cursor.fetchone()[0]
+        user_id = cursor.fetchone()
 
-        if user_id is not None:
-            return user_id
+        if user_id:
+            return user_id[0]
         else:
             return None
 
@@ -797,7 +797,7 @@ def db_get_and_change_permissions(dir_name, username, fileflag):
     else:
         print("No valid group names provided.")
 
-def db_check_user_in_group(username, group_name):
+def db_check_user_in_group(username, group_names):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute('SELECT group_name FROM users WHERE username = ?', (db_encrypt_data(username),))
@@ -805,7 +805,9 @@ def db_check_user_in_group(username, group_name):
     conn.close()
     
     if result:
-        user_groups = db_decrypt_data(result[0]).split(',') if result[0] else []
-        return group_name in user_groups
+        user_groups = db_decrypt_data(result[0]).split(',')
+        for group in user_groups:
+            if group in group_names:
+                return True
     else:
         return False
