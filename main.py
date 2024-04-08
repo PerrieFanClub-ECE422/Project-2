@@ -277,6 +277,7 @@ def check_directory_perms(curruser, dir_name, dir_path):
 def check_integrity(directory, e_username):
     curruser_id = dbsetup.db_get_user_id(dbsetup.db_decrypt_data(e_username))
     corrupted_files = []
+    corrupted_dirs = []
     if curruser_id:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -288,17 +289,19 @@ def check_integrity(directory, e_username):
         ''',(curruser_id,)
         )
         corrupted_files = cursor.fetchall()
-    else: 
-        print("Unable to retrieve user_id, cannot perform the file integrity check")
 
-    cursor.execute(
-    '''
-    SELECT dir_path, dir_name
-    FROM directories
-    WHERE dir_name NOT IN (SELECT username FROM users) AND dir_name != "root"
-    '''
-    )
-    corrupted_dirs = cursor.fetchall()
+        cursor.execute(
+        '''
+        SELECT dir_path, dir_name
+        FROM directories
+        WHERE owner_id = ? 
+        AND dir_name != "root"
+        AND dir_path != ? 
+        ''',(curruser_id,directory,)
+        )
+        corrupted_dirs = cursor.fetchall()
+    else: 
+        print("Unable to retrieve user_id, cannot perform the integrity check")
 
     for root, dirs, files in os.walk(directory):
         for e_file_name in files:
