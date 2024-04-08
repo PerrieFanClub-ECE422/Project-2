@@ -253,14 +253,32 @@ def check_directory_perms(curruser, dir_name, dir_path):
 
 
 def list_files(directory, username):
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute(
+    '''
+    SELECT file_path, file_name
+    FROM files
+    '''
+    )
+        
+    db_encrypted_filepaths = cursor.fetchone()
+
     for root, dirs, files in os.walk(directory):
-        for file_name in files:
-            f_path = os.path.join(root, file_name)
-            #dbsetup.db_check_file_name_integrity(f, f_path, username)
+        for e_file_name in files:
+            f_path = os.path.join(root, e_file_name)
+            
+            if e_file_name in db_encrypted_filepaths[0]:
+                db_encrypted_filepaths.remove(e_file_name)
+            dbsetup.db_check_file_name_integrity(e_file_name, f_path, username)
 
             with open(f_path, 'r') as fi:
-                content = fi.read()
-                dbsetup.db_check_file_content_integrity(dbsetup.db_decrypt_data(file_name), content, f_path, username)
+                e_content = fi.read()
+                dbsetup.db_check_file_content_integrity(e_file_name, e_content, f_path, username)
+
+    print("original file names that have been changed:")
+    print(db_encrypted_filepaths)
 
 
 if __name__ == '__main__':
