@@ -567,7 +567,6 @@ def change_permissions(name, group_names, fileflag):
         conn.close()
 
 def db_create_file(file_name, owner_name):
-    #TODO: encrypt info in function caller, decrypt info here
     e_file_name = db_encrypt_data(file_name)
     owner_id = db_get_user_id(owner_name)
     new_file_path = os.path.join(commands.pwd(), e_file_name)
@@ -606,6 +605,42 @@ def db_create_file(file_name, owner_name):
     finally:
         conn.close()
 
+
+def db_delete_file(file_name, owner_name):
+    e_file_name = db_encrypt_data(file_name)
+    owner_id = db_get_user_id(owner_name)
+    new_file_path = os.path.join(commands.pwd(), e_file_name)
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT * FROM files WHERE file_name = ? AND file_path = ?", (e_file_name, new_file_path))
+        result = cursor.fetchone()
+        if result is None:
+            print("File does not exist")
+            return 
+        else:
+            cursor.execute(
+                '''DELETE FROM files 
+                WHERE file_name = ?
+                AND file_path = ?
+                ''', 
+                (e_file_name, new_file_path)
+                )
+
+        
+        print(f"File {file_name} deleted by {owner_name}")
+
+        conn.commit()
+
+
+    except sqlite3.Error as e:
+        print("SQLite error:", e)
+        return None
+
+
+    finally:
+        conn.close()
 
 
 
