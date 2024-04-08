@@ -89,8 +89,8 @@ def touch(file_name, owner_name): # create a new file (txt)
         # Check if the file already exists
         if not os.path.exists(e_file_name):
             # If it doesn't exist, create file
-            with open(e_file_name, 'w'):
-                e_file_name.write(dbsetup.db_encrypt_data(""))
+            with open(e_file_name , 'w') as file:
+                file.write(dbsetup.db_encrypt_data(""))
                 pass
             dbsetup.db_create_file(file_name, owner_name)
             print(f"File '{file_name}' created successfully.")
