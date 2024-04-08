@@ -546,8 +546,7 @@ def change_permissions(name, group_names, fileflag):
         if id:            
             # Convert group names to a string to store as permissions
             permissions = ','.join(group_names)
-            print("PERMISSIONS: " , permissions)
-            print("Encrypted PERMISSIONS: ", db_encrypt_data(permissions))
+            print("Permisions: " , permissions)
 
             # Update permissions for the directory
             if not fileflag:

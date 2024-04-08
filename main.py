@@ -147,7 +147,6 @@ def file_system(current_user_name):
                 dir_path = commands.pwd()
                 e_file_name = dbsetup.db_encrypt_data(cmd[1])
                 
-                print(os.path.join(dir_path, cmd[1]), e_file_name)
                 if check_file_perms(current_user_name, e_file_name, os.path.join(dir_path, e_file_name)): 
                     commands.rm(cmd[1], current_user_name)
                 else: 
@@ -169,32 +168,40 @@ def file_system(current_user_name):
         elif cmd[0] == "cat": # ----------------------------------------------- cat
             if len(cmd) < 2:
                 print("please specify a file name")
-            else:
+            elif check_file_perms(current_user_name, dbsetup.db_encrypt_data(cmd[1]), os.path.join(commands.pwd(), dbsetup.db_encrypt_data(cmd[1]))): 
                 commands.cat(cmd[1])
+            else:
+                print("File does not exists")
 
         elif cmd[0] == "echo": # ----------------------------------------------- echo
             if len(cmd) < 3:
                 print("please specify both a file name and contents to write")
-            else:
+            elif check_file_perms(current_user_name, dbsetup.db_encrypt_data(cmd[1]), os.path.join(commands.pwd(), dbsetup.db_encrypt_data(cmd[1]))):
                 input_string = ' '.join(cmd[2:])
                 commands.echo(cmd[1], input_string)
+            else:
+                print("File does not exists")
         
         elif cmd[0] == "mv": # ----------------------------------------------- mv
             if len(cmd) < 3:
                 print("please specify both a file name and your desired new file name")
-            else:
+            elif check_file_perms(current_user_name, dbsetup.db_encrypt_data(cmd[1]), os.path.join(commands.pwd(), dbsetup.db_encrypt_data(cmd[1]))):
                 commands.mv(cmd[1], cmd[2])
+            else:
+                print("File does not exists")
 
         elif cmd[0] == "chmod": # ----------------------------------------------- chmod
             if len(cmd) < 3:
                 print("Please specify flag and target name.")
-            else:
+            elif check_directory_perms(current_user_name, dbsetup.db_encrypt_data(cmd[2]), os.path.join(commands.pwd(), dbsetup.db_encrypt_data(cmd[2]))) or check_file_perms(current_user_name, dbsetup.db_encrypt_data(cmd[2]), os.path.join(commands.pwd(), dbsetup.db_encrypt_data(cmd[2]))):
                 flag = cmd[1]
                 target_name = cmd[2]
                 if flag in ["-d", "-f"]:
                     dbsetup.prompt_and_change_permissions(target_name, current_user_name, fileflag=(flag == "-f"))
                 else:
                     print("Invalid flag!")
+            else: 
+                print("File does not exists")
         
         elif cmd[0] == "cmds": # ----------------------------------------------- cmds
             print(cmds)
@@ -302,7 +309,7 @@ def check_integrity(directory, e_username):
                     break  
 
             with open(f_path, 'r') as fi:
-                e_content = fi.read()
+                e_content = dbsetup.db_encrypt_data(fi.read())
                 dbsetup.db_check_file_content_integrity(e_file_name, e_content, f_path, e_username)
         for e_dir_name in dirs:
             d_path = os.path.join(root, e_dir_name)
