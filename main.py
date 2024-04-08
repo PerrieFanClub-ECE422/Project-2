@@ -281,9 +281,8 @@ def check_integrity(directory, username):
     '''
     SELECT dir_path, dir_name
     FROM directories
-    WHERE dir_name != (SELECT username FROM users) AND dir_name != ?
-    ''',
-    ("root",)
+    WHERE dir_name NOT IN (SELECT username FROM users) AND dir_name != "root"
+    '''
     )
     corrupted_dirs = cursor.fetchall()
 
