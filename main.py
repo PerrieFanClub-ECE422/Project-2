@@ -71,7 +71,7 @@ def register():
     result = dbsetup.db_add_user(username.lower(), password, group_name)
 
     if result:
-        print("registration succeeded")
+        print("Registration succeeded")
         commands.mkdir(username, username)
 
 def create_group_prompt():
@@ -97,7 +97,7 @@ def file_system(current_user_name):
     exit      => exit the file system   >> exit
     """
     print(cmds)
-    list_files(os.path.join(os.getcwd(),dbsetup.db_encrypt_data(current_user_name)), dbsetup.db_encrypt_data(current_user_name))
+    check_integrity(os.path.join(os.getcwd(),dbsetup.db_encrypt_data(current_user_name)), dbsetup.db_encrypt_data(current_user_name))
     while True:
 
         cmd = input("\n------ SFS ------ " + commands.pwd_short() + "$ ").strip().split()
@@ -252,8 +252,7 @@ def check_directory_perms(curruser, dir_name, dir_path):
     # CURRENT_USER = <query to get unique ID>
 
 
-def list_files(directory, username):
-
+def check_integrity(directory, username):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute(
@@ -262,24 +261,67 @@ def list_files(directory, username):
     FROM files
     '''
     )
-        
-    db_encrypted_filepaths = cursor.fetchone()
+    corrupted_files = cursor.fetchall()
+
+    cursor.execute(
+    '''
+    SELECT dir_path, dir_name
+    FROM directories
+    WHERE dir_name != (SELECT username FROM users) AND dir_name != ?
+    ''',
+    ("root",)
+    )
+    corrupted_dirs = cursor.fetchall()
+
 
     for root, dirs, files in os.walk(directory):
         for e_file_name in files:
             f_path = os.path.join(root, e_file_name)
-            
-            if e_file_name in db_encrypted_filepaths[0]:
-                db_encrypted_filepaths.remove(e_file_name)
-            dbsetup.db_check_file_name_integrity(e_file_name, f_path, username)
+            for corrupted_path, corrupted_name in corrupted_files:
+                if corrupted_name == e_file_name and corrupted_path in f_path:
+                    corrupted_files.remove((corrupted_path, corrupted_name))
+                    break  
 
             with open(f_path, 'r') as fi:
                 e_content = fi.read()
                 dbsetup.db_check_file_content_integrity(e_file_name, e_content, f_path, username)
+        for e_dir_name in dirs:
+            d_path = os.path.join(root, e_dir_name)
+            for corrupted_path, corrupted_name in corrupted_dirs:
+                if corrupted_name == e_dir_name and corrupted_path in d_path:
+                    corrupted_dirs.remove((corrupted_path, corrupted_name))
+                    break
+    if corrupted_dirs:
+        print("Original directories names that have been changed:")
+        for dir_path, dir_name in corrupted_dirs:
+            print(f"Directory name: {dbsetup.db_decrypt_data(dir_name)}, Directory path: {decrypt_directory_names(dir_path)}")
+    if corrupted_files:
+        print("Original file names that have been changed:")
+        for file_path, file_name in corrupted_files:
+            print(f"Filename: {dbsetup.db_decrypt_data(file_name)}, Filepath: {decrypt_directory_names(file_path)}")
 
-    print("original file names that have been changed:")
-    print(db_encrypted_filepaths)
+def decrypt_directory_names(file_path):
+    path_components = file_path.split('/')
 
+    decrypted_path = ""
+
+    root_found = False
+
+    for directory_name in path_components:
+        if directory_name == 'root':
+            root_found = True
+            decrypted_path += "root/"
+        elif root_found:
+            decrypted_directory_name = dbsetup.db_decrypt_data(directory_name)
+            decrypted_path += decrypted_directory_name + '/'
+        else: 
+            decrypted_path += directory_name + '/'
+
+    # Remove the trailing '/' if present
+    if decrypted_path.endswith('/'):
+        decrypted_path = decrypted_path[:-1]
+
+    return decrypted_path
 
 if __name__ == '__main__':
     dbsetup.init_global_keys()

@@ -61,33 +61,32 @@ def init_db():
             dir_id INTEGER PRIMARY KEY AUTOINCREMENT,
             dir_name TEXT NOT NULL,
             owner_id INTEGER NOT NULL,
-            dir_path TEXT NOT NULL,
+            dir_path TEXT NOT NULL UNIQUE,
             permissions TEXT NOT NULL,
             FOREIGN KEY (owner_id) REFERENCES users (user_id)
         )
         '''
     )
-    #populate directory table with root directory
-    cursor.execute(
-        '''
-        INSERT INTO directories (
-            dir_name, 
-            owner_id,
-            dir_path,
-            permissions
-            ) 
-            VALUES (?, ?, ?, ?)
-        ''', 
-        ("root", 0, "root", db_encrypt_data("all"))
-    )
 
+    #populate directory table with root directory
     new_dir_path = os.path.join(os.getcwd(), "root")
-    print(new_dir_path)
+
     if not os.path.exists(new_dir_path):
         os.mkdir(new_dir_path)
+        cursor.execute(
+            '''
+            INSERT INTO directories (
+                dir_name, 
+                owner_id,
+                dir_path,
+                permissions
+                ) 
+                VALUES (?, ?, ?, ?)
+            ''', 
+        ("root", 0, new_dir_path, db_encrypt_data("all"))
+        )
     os.chdir(new_dir_path)
 
-    #cursor.execute("DROP TABLE IF EXISTS files")
     # files table
     cursor.execute(
         '''
@@ -422,7 +421,6 @@ def db_add_user(username, password, group_name=None):
 
         # hash the pw with sha256
         password_hash = sha256(password.encode()).hexdigest()
-        print("Registering user: ", username)
         cursor.execute("INSERT INTO users (username, password_hash, group_name) VALUES (?, ?, ?)", (db_encrypt_data(username), password_hash, db_encrypt_data(group_name) if group_name else None))
 
         # Commit changes
@@ -489,7 +487,6 @@ def db_create_directory(dir_name, owner_name):
             print("Directory already exists")
             return  # Entry exists
         else:
-            #TODO: possibly make sure that owner_id is referencing the tables correctly
             cursor.execute(
                 '''INSERT INTO directories (
                     dir_name, 
@@ -503,8 +500,6 @@ def db_create_directory(dir_name, owner_name):
                 )
 
             conn.commit()
-            print(f"Directory {dir_name} created by {owner_name}")
-            # populate files database with name, hashed name, owner id, permission type, content = empty for now
 
     except sqlite3.Error as e:
         print("SQLite error:", e)
@@ -703,31 +698,6 @@ def db_modify_file_name(file_name, new_file_name):
         conn.close()
 
 
-
-def db_check_file_name_integrity(e_filename, e_file_path, username):
-
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute(
-        '''
-        SELECT file_path
-        FROM files
-        '''
-        )
-            
-        db_encrypted_filepaths = cursor.fetchone()
-
-        if e_file_path not in db_encrypted_filepaths:
-            print(f"{e_filename}'s file name has been modified by an external user")
-            return False
-
-    except sqlite3.Error as e:
-        print("SQLite error:", e)
-
-
-
 def db_check_file_content_integrity(e_filename, e_external_filecontent, e_file_path, username):
 
     conn = sqlite3.connect(db_path)
@@ -746,11 +716,16 @@ def db_check_file_content_integrity(e_filename, e_external_filecontent, e_file_p
         db_encrypted_content = cursor.fetchone()
 
         if not db_encrypted_content:
-            print("file name does not exist")
+            try:
+                print(f"File: '{db_decrypt_data(e_filename)}' parent directory has been renamed by an external user")
+            except:
+                print(f"File: '{e_filename}' has been renamed by an external user")
             return
         elif db_encrypted_content[0] != e_external_filecontent:
-            print(f"{e_filename}'s content has been modified by an external user!")
-            return
+            try:
+                print(f"{db_decrypt_data(e_filename)}'s content has been modified by an external user!")
+            except:
+                print(f"{e_filename}'s content has been modified by an external user!")
 
     except sqlite3.Error as e:
         print("SQLite error:", e)

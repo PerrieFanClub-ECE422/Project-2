@@ -72,10 +72,8 @@ def cd(current_directory, current_user_name, target_directory): # change dir
 
 def mkdir(new_dir, owner_name):
     e_new_dir = dbsetup.db_encrypt_data(new_dir)
-    print(e_new_dir)
     # Create a new directory inside the current directory
     new_dir_path = os.path.join(os.getcwd(), e_new_dir)
-    print("new_dir_path", new_dir_path)
     os.mkdir(new_dir_path)
     #create a new directory for the user in database
 
