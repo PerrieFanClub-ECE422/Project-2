@@ -19,11 +19,9 @@ HMAC_KEY = b'0987654321abcdef0123456789abcdef'
 
 def init_db():
     
-    # connect and create cursor
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    
     # create tables -------------------------------
     # users table
     cursor.execute(
@@ -48,8 +46,7 @@ def init_db():
         '''
     )
 
-    # directory table
-    #cursor.execute("DROP TABLE IF EXISTS directories")
+    # directories table
     cursor.execute(
         '''
         CREATE TABLE IF NOT EXISTS directories (
@@ -99,16 +96,12 @@ def init_db():
         '''
     )
 
-    # ---------------------------------------------
-    # NOTE:
-    #   sqlite creates a special table called sqlite_sequence when
-    #   using AUTOINCREMENT
-
     # commit changes and close db
     conn.commit()
     conn.close()
 
 def db_check_user_exists(username):
+    # runs query to see if the inputted username exists in users table
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -196,8 +189,9 @@ def db_decrypt_data(encrypted_data):
     #reutnr decrypted data
     return decrypted_data.decode('utf-8')
 
-
 def db_get_directory_perms(dir_name, dir_path):
+    #for a given directory, uniquely defined by its dir_path. 
+    #this function will get and return directory permissions on a successful query execution.
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -220,8 +214,9 @@ def db_get_directory_perms(dir_name, dir_path):
     except sqlite3.Error as e:
         print(f"Database error: {e} get directory perms")
 
-
 def db_get_file_perms(file_name, file_path):
+    #for a given file, uniquely defined by its file_path. 
+    #this function will get and return file permissions on a successful query execution.
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -245,7 +240,8 @@ def db_get_file_perms(file_name, file_path):
         print(f"Database error: {e} get file perms")
 
 def db_get_directory_owner(dir_name, dir_path):
-
+    #for a given directory, uniquely defined by its dir_path. 
+    #this function will return the directory owner_id on a successful query execution.
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -274,7 +270,8 @@ def db_get_directory_owner(dir_name, dir_path):
         conn.close()
 
 def db_get_file_owner(file_name, file_path):
-    
+    #for a given file, uniquely defined by its file_path. 
+    #this function will return the file owner_id on a successful query execution.
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -303,7 +300,8 @@ def db_get_file_owner(file_name, file_path):
         conn.close()
 
 def db_get_user_id(username):
-
+    #for a given unique username. 
+    #this function will return the user_id associated with the username on a successful query execution.
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -329,9 +327,8 @@ def db_get_user_id(username):
     finally:
         conn.close()
 
-
 def db_add_group(group_name):
-
+    #this function will populate the DB with the user defined group 
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
@@ -349,8 +346,8 @@ def db_add_group(group_name):
     finally:
         conn.close()
 
-    
 def db_get_existing_groups():
+    #this function will get all existing groups and print them 
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -373,6 +370,7 @@ def db_get_existing_groups():
         return []
 
 def db_assign_user_to_groups(username, selected_groups):
+    #this function will add a user with the selected groups they want to be a part of. 
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -383,7 +381,7 @@ def db_assign_user_to_groups(username, selected_groups):
     conn.close()
 
 def db_add_user(username, password, group_name=None):
-
+    #Upon registering a new user, this function will be called to populate the users table with a new row reflecting the user defined inputs.
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -406,9 +404,8 @@ def db_add_user(username, password, group_name=None):
         # Ensure the database connection is closed
         conn.close()
 
-
 def db_auth_user(username, password):
-
+    #Upon login, this function is called to validate the user credentials
     # hash the pw with sha256
     password_hash = sha256(password.encode()).hexdigest()
 
@@ -427,7 +424,7 @@ def db_auth_user(username, password):
 
         fetcheduser = cursor.fetchone()
 
-        # return user_id
+        # return user_id, successful login
         if fetcheduser:
             return fetcheduser[0]
 
@@ -437,12 +434,12 @@ def db_auth_user(username, password):
 
     finally:
         conn.close()
-
+    #unsuccessful login
     return None
 
-
-
 def db_create_directory(dir_name, owner_name):
+    #Upon running the mkdir this function is called populate the directories tables.
+    #encrypting the directory
     e_dir_name = db_encrypt_data(dir_name)
     owner_id = db_get_user_id(owner_name)
     new_dir_path = os.path.join(commands.pwd(), e_dir_name)
@@ -450,12 +447,14 @@ def db_create_directory(dir_name, owner_name):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     try:
+        # Check if directory exists 
         cursor.execute("SELECT * FROM directories WHERE dir_name = ? AND dir_path = ?", (e_dir_name, new_dir_path))
         result = cursor.fetchone()
         if result is not None:
             print("Directory already exists")
             return  # Entry exists
         else:
+            #populating table with new directory, with an intial permissions value of "owner".
             cursor.execute(
                 '''INSERT INTO directories (
                     dir_name, 
@@ -473,30 +472,29 @@ def db_create_directory(dir_name, owner_name):
     except sqlite3.Error as e:
         print("SQLite error:", e)
         return None
-
-
+    
     finally:
         conn.close()
 
-
-def change_permissions(name, group_names, fileflag):
+def change_permissions(path, group_names, fileflag):
+    #Upon the 'chmod' is ran, this function will update the file or directory permissions.
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         id = None
-        # Fetch directory ID based on directory name
+
+        # Fetch directory/file ID based on file/directory path
         if not fileflag:
-            cursor.execute("SELECT dir_id FROM directories WHERE dir_name = ?", (db_encrypt_data(name),))
+            cursor.execute("SELECT dir_id FROM directories WHERE dir_path = ?", (path,))
         else: 
-            cursor.execute("SELECT file_id FROM files WHERE file_name = ?", (db_encrypt_data(name),))
-        
+            cursor.execute("SELECT file_id FROM files WHERE file_path = ?", (path,))
         id = cursor.fetchone()
         if id:            
-            # Convert group names to a string to store as permissions
+            # Convert group names from comma seperated string to a list
             permissions = ','.join(group_names)
             print("Permisions: " , permissions)
 
-            # Update permissions for the directory
+            # Update permissions for the directory/file
             if not fileflag:
                 cursor.execute("UPDATE directories SET permissions = ? WHERE dir_id = ?", (db_encrypt_data(permissions), id[0]))
             else:
@@ -514,18 +512,21 @@ def change_permissions(name, group_names, fileflag):
         conn.close()
 
 def db_create_file(file_name, owner_name):
+    # This function will be invoke after touch had been called
     e_file_name = db_encrypt_data(file_name)
     owner_id = db_get_user_id(owner_name)
     new_file_path = os.path.join(commands.pwd(), e_file_name)
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     try:
+        #check if file_path exists already
         cursor.execute("SELECT * FROM files WHERE file_name = ? AND file_path = ?", (e_file_name, new_file_path))
         result = cursor.fetchone()
         if result is not None:
             print("File already exists")
             return  # Entry exists
         else:
+            #create and populate the file with a new file where their permissions is default as 'owner' and content defaulted as the encrypted value of an empty string.
             cursor.execute(
                 '''INSERT INTO files (
                     file_name, 
@@ -538,7 +539,6 @@ def db_create_file(file_name, owner_name):
                     (e_file_name, owner_id, new_file_path, db_encrypt_data("owner"), db_encrypt_data(""))
                 )
 
-        
         print(f"File {file_name} created by {owner_name}")
 
         conn.commit()
@@ -552,8 +552,8 @@ def db_create_file(file_name, owner_name):
     finally:
         conn.close()
 
-
 def db_delete_file(file_name, owner_name):
+    #this function will be invoke when 'rm' is called
     e_file_name = db_encrypt_data(file_name)
     owner_id = db_get_user_id(owner_name)
     new_file_path = os.path.join(commands.pwd(), e_file_name)
@@ -563,10 +563,12 @@ def db_delete_file(file_name, owner_name):
     try:
         cursor.execute("SELECT * FROM files WHERE file_name = ? AND file_path = ?", (e_file_name, new_file_path))
         result = cursor.fetchone()
+        #checks if file exists
         if result is None:
             print("File does not exist")
             return 
         else:
+            #if so delete it from the files table
             cursor.execute(
                 '''DELETE FROM files 
                 WHERE file_name = ?
@@ -574,25 +576,21 @@ def db_delete_file(file_name, owner_name):
                 ''', 
                 (e_file_name, new_file_path)
                 )
-
         
         print(f"File {file_name} deleted by {owner_name}")
 
         conn.commit()
 
-
     except sqlite3.Error as e:
         print("SQLite error:", e)
         return None
 
-
     finally:
         conn.close()
 
-
-
 def db_modify_file_contents(file_name, new_content):
-    # cncrypt the file name to match the encrypted version stored in the database
+    #this function will be invoked when 'echo' is executed
+    # encrypt the file name to match the encrypted version stored in the database
     e_file_name = db_encrypt_data(file_name)
     e_new_content = db_encrypt_data(new_content)  # Encrypt the new content
     file_path = os.path.join(commands.pwd(), e_file_name)
@@ -633,7 +631,8 @@ def db_modify_file_contents(file_name, new_content):
     
 
 def db_modify_file_name(file_name, new_file_name):
-    # cncrypt the file name to match the encrypted version stored in the database
+    #this function will be invoke when 'mv' is executed
+    # encrypt the file name to match the encrypted version stored in the database
     e_old_file_name = db_encrypt_data(file_name)
     e_new_file_name = db_encrypt_data(new_file_name) 
     old_file_path = os.path.join(commands.pwd(), e_old_file_name)
@@ -659,6 +658,7 @@ def db_modify_file_name(file_name, new_file_name):
             (e_new_file_name, old_file_path,)
         )
         
+        # Update the file's path
         cursor.execute(
             '''UPDATE files
                SET file_path = ?
@@ -679,13 +679,13 @@ def db_modify_file_name(file_name, new_file_name):
     finally:
         conn.close()
 
-
 def db_check_file_content_integrity(e_filename, e_external_filecontent, e_file_path, username):
-
+    #this function is invoked when a user logs in. 
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     try:
+        #retrieve the content of a file based on a given file_path
         cursor.execute(
             '''
             SELECT content
@@ -699,20 +699,25 @@ def db_check_file_content_integrity(e_filename, e_external_filecontent, e_file_p
 
         if not db_encrypted_content:
             try:
+                #if the parent directory has been renamed, its path wouldnt exists.
                 print(f"File: '{db_decrypt_data(e_filename)}' parent directory has been renamed by an external user")
             except:
+                #if the decrypt function returns an error, that means that the file had been renamed.
                 print(f"File: '{e_filename}' has been renamed by an external user")
             return
         elif db_encrypted_content[0] != e_external_filecontent:
+            #the current file content does not match the file content stored in DB, means that the file content was changed by an external user.
             try:
                 print(f"{db_decrypt_data(e_filename)}'s content has been modified by an external user!")
             except:
+                #just in case e_filename causes an error in our decrypt function, shouldnt happen.
                 print(f"{e_filename}'s content has been modified by an external user!")
 
     except sqlite3.Error as e:
         print("SQLite error:", e)
 
-def prompt_and_change_permissions(dir_name, username, fileflag):
+def prompt_and_change_permissions(path, username, fileflag):
+    # this function is invoked when chmod is execute
     # Prompt the user to select permission type
     print("Select permission type:")
     print("1. All")
@@ -720,31 +725,32 @@ def prompt_and_change_permissions(dir_name, username, fileflag):
     print("3. Certain groups")
 
     choice = input("Enter your choice (1, 2, or 3): ")
-
+    #based on the users input we then update permission
     if choice == '1':
-        change_permissions(dir_name, ["all"], fileflag)
+        change_permissions(path, ["all"], fileflag)
     elif choice == '2':
-        change_permissions(dir_name, ["owner"], fileflag)
+        change_permissions(path, ["owner"], fileflag)
     elif choice == '3':
-        db_get_and_change_permissions(dir_name, username, fileflag)
+        db_get_and_change_permissions(path, username, fileflag)
     else:
         print("Invalid choice. Please enter 1, 2, or 3.")
 
-def db_get_and_change_permissions(dir_name, username, fileflag):
+def db_get_and_change_permissions(path, username, fileflag):
+    # this function will be invoked when chmod is executed
     # Show available groups
     db_get_existing_groups()
     group_names = input("Enter group names separated by comma: ").split(',')
 
-    # Check if user is owner of the group and change permissions for valid groups
-    owner_id = db_get_user_id(username)
+    # Check and store the groups that user is a part of the groups out of the ones they selected
     valid_group_names = [group_name for group_name in group_names if db_check_user_in_group(username, group_name)]
     if valid_group_names:
         print("Provided existing groups that you are a part of: ", valid_group_names)
-        change_permissions(dir_name, valid_group_names, fileflag)
+        change_permissions(path, valid_group_names, fileflag)
     else:
         print("No valid group names provided.")
 
 def db_check_user_in_group(username, group_names):
+    #this function will check if a given user is a part of the groups provided
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute('SELECT group_name FROM users WHERE username = ?', (db_encrypt_data(username),))

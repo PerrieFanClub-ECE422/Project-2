@@ -196,8 +196,9 @@ def file_system(current_user_name):
             elif check_directory_perms(current_user_name, dbsetup.db_encrypt_data(cmd[2]), os.path.join(commands.pwd(), dbsetup.db_encrypt_data(cmd[2]))) or check_file_perms(current_user_name, dbsetup.db_encrypt_data(cmd[2]), os.path.join(commands.pwd(), dbsetup.db_encrypt_data(cmd[2]))):
                 flag = cmd[1]
                 target_name = cmd[2]
+                path = os.path.join(commands.pwd(), dbsetup.db_encrypt_data(target_name))
                 if flag in ["-d", "-f"]:
-                    dbsetup.prompt_and_change_permissions(target_name, current_user_name, fileflag=(flag == "-f"))
+                    dbsetup.prompt_and_change_permissions(path, current_user_name, fileflag=(flag == "-f"))
                 else:
                     print("Invalid flag!")
             else: 
@@ -230,7 +231,7 @@ def check_file_perms(curruser, file_name, file_path):
                 return True
             elif file_perms == "owner" and (curruser_id != file_owner_id):
                 return False
-            elif file_perms[0] == "all":
+            elif file_perms == "all":
                 return True
             elif dbsetup.db_check_user_in_group(curruser, file_perms):
                 return True
@@ -257,7 +258,7 @@ def check_directory_perms(curruser, dir_name, dir_path):
             return True
         elif dir_perms == "owner" and (curruser_id != dir_owner_id):
             return False
-        elif dir_perms[0] == "all":
+        elif dir_perms == "all":
             return True
         elif dbsetup.db_check_user_in_group(curruser, dir_perms):
             return True
