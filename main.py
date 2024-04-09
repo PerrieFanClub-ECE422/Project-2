@@ -33,6 +33,7 @@ def login():
     password = getpass.getpass("Enter password: ")
     
     if login_user(username, password):  # Login user using the database
+        #send logged in user to file_system
         file_system(username)
     else:
         if not dbsetup.db_check_user_exists(username): 
@@ -217,7 +218,6 @@ def file_system(current_user_name):
         else:
             print("command not recognized; type 'cmds' to list all commands")
 
-
 def check_file_perms(curruser, file_name, file_path):
     if curruser == "":
         print(f"{curruser}:No permission to access file")
@@ -270,15 +270,12 @@ def check_directory_perms(curruser, dir_name, dir_path):
 
     return True
 
-    # Check if password is correct -> do some encryption/decryption on db side
-    # set CURRENT_USER variable to the unique ID of the user that just logged in.
-    # CURRENT_USER = <query to get unique ID>
-
-
 def check_integrity(directory, e_username):
+    #this function checks if any directories or files were changed by an external user
     curruser_id = dbsetup.db_get_user_id(dbsetup.db_decrypt_data(e_username))
     corrupted_files = []
     corrupted_dirs = []
+    # retrieve all the directories and files belonging to the user that logged in
     if curruser_id:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -303,24 +300,29 @@ def check_integrity(directory, e_username):
         corrupted_dirs = cursor.fetchall()
     else: 
         print("Unable to retrieve user_id, cannot perform the integrity check")
-
+    #iterate through all the files and directories within a users home directory
     for root, dirs, files in os.walk(directory):
+        #compare files on disk with list of files from db
         for e_file_name in files:
             f_path = os.path.join(root, e_file_name)
             for corrupted_path, corrupted_name in corrupted_files:
                 if corrupted_name == e_file_name and corrupted_path in f_path:
+                    #if file exists in db then remove from the corrupted list
                     corrupted_files.remove((corrupted_path, corrupted_name))
                     break  
-
             with open(f_path, 'r') as fi:
+                #get file content and check if its the same in db
                 e_content = fi.read()
                 dbsetup.db_check_file_content_integrity(e_file_name, e_content, f_path, e_username)
+        #compare directories on disk with list of directories from db
         for e_dir_name in dirs:
             d_path = os.path.join(root, e_dir_name)
             for corrupted_path, corrupted_name in corrupted_dirs:
                 if corrupted_name == e_dir_name and corrupted_path in d_path:
+                    #if directory exists remove from corrupted_dirs
                     corrupted_dirs.remove((corrupted_path, corrupted_name))
                     break
+    #notify user if needed
     if corrupted_dirs:
         print("Original directories names that have been changed:")
         for dir_path, dir_name in corrupted_dirs:

@@ -1,4 +1,1 @@
-
-shutil
-pycrypto
-sys
+cryptography

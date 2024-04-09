@@ -8,12 +8,11 @@ def pwd(): # see current directory
     return curdir
 
 def decrypt_sfs_path(path):
-
+    #this function will decrypt paths after root to show in terminal
     segments = path.split(os.sep)
     root_index = segments.index("root")
     decrypted_segments = [dbsetup.db_decrypt_data(segment) for segment in segments[root_index + 1:]]
     encrypted_path = os.sep.join(segments[:root_index + 1] + decrypted_segments)
-    
     return encrypted_path
 
 def pwd_short():
@@ -27,11 +26,11 @@ def pwd_short():
         display_dir_short = curdirshort  
     return display_dir_short
 
-
 def ls(username, dir_path): # ------------------------------------ ls command
     try:
         files = os.listdir(dir_path)
         for file in files:
+            #check if they have permissions to view the decrypted view of either the file or folder
             if main.check_directory_perms(username, file, os.path.join(dir_path,file)) or main.check_file_perms(username, file, os.path.join(dir_path,file)):
                 print(dbsetup.db_decrypt_data(file), end="  ")
             else:
@@ -44,11 +43,10 @@ def ls(username, dir_path): # ------------------------------------ ls command
     except Exception as e:
         print(f"Error: {e}")
 
-
 def cd(current_directory, current_user_name, target_directory): # ------------------------------------ cd command
     e_dir_name=dbsetup.db_encrypt_data(target_directory)
     dir_path = os.path.join(current_directory, e_dir_name)
-
+    #check if they have permissions
     if main.check_directory_perms(current_user_name, e_dir_name, dir_path):
         os.chdir(dir_path)
     elif not os.path.exists(target_directory):
@@ -57,7 +55,6 @@ def cd(current_directory, current_user_name, target_directory): # --------------
         print(f"No access to directory {target_directory}")
 
     return 
-
 
 def mkdir(new_dir, owner_name):# ------------------------------------ mkdir command
 
@@ -68,8 +65,6 @@ def mkdir(new_dir, owner_name):# ------------------------------------ mkdir comm
     #create a new directory for the user in database
 
     dbsetup.db_create_directory(dbsetup.db_decrypt_data(e_new_dir), owner_name)
-
-
 
 def touch(file_name, owner_name):# ------------------------------------ touch command
 
@@ -104,7 +99,6 @@ def rm(file_name, owner_name): # ------------------------------------ rm command
     except Exception as e:
         print("Error:", e)
 
-
 def cat(file_name): # ---------------------------------------------------------- cat command
     e_file_name = dbsetup.db_encrypt_data(file_name)
 
@@ -118,8 +112,6 @@ def cat(file_name): # ----------------------------------------------------------
         print(f"Error: File '{file_name}' not found!")
     except Exception as e:
         print(f"Error: {e}")
-
-
 
 def echo(file_name, content): # ---------------------------------------------------------- echo command
     e_file_name = dbsetup.db_encrypt_data(file_name)
@@ -137,7 +129,6 @@ def echo(file_name, content): # ------------------------------------------------
     except Exception as e:
         print(f"Error: {e}")
 
-
 def mv(file_name, new_name): # ---------------------------------------------------------- mv command
     e_file_name = dbsetup.db_encrypt_data(file_name)
     e_new_name = dbsetup.db_encrypt_data(new_name)
@@ -152,4 +143,3 @@ def mv(file_name, new_name): # -------------------------------------------------
         print(f"Error: '{file_name}' does not exist.")
     except Exception as e:
         print(f"Error: {e}")
-
