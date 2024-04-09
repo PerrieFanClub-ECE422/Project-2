@@ -2,24 +2,19 @@ import binascii
 import sqlite3
 from hashlib import sha256
 import commands
-from utils import generate_key_pair
 import os
-import base64
-from cryptography.fernet import Fernet
-from cryptography.hazmat.backends import default_backend
+
+from cryptography.hazmat.primitives import hashes, hmac
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding
-import binascii
+
 # global vars
 db_path= os.getcwd() + '/sfs.db'
-private_key = None
-public_key = None
-AES_KEY = b'0123456789abcdef0123456789abcdef'
 
-def init_global_keys():
-    global private_key, public_key
-    private_key, public_key = generate_key_pair()
+# see report for why this is hardcoded in
+AES_KEY = b'0123456789abcdef0123456789abcdef'
+HMAC_KEY = b'0987654321abcdef0123456789abcdef'
 
 
 def init_db():
@@ -85,6 +80,8 @@ def init_db():
             ''', 
         ("root", 0, new_dir_path, db_encrypt_data("all"))
         )
+    
+    #move into the root directory
     os.chdir(new_dir_path)
 
     # files table
@@ -106,7 +103,6 @@ def init_db():
     # NOTE:
     #   sqlite creates a special table called sqlite_sequence when
     #   using AUTOINCREMENT
-
 
     # commit changes and close db
     conn.commit()
@@ -139,31 +135,65 @@ def db_check_user_exists(username):
     finally:
         conn.close()
 
+def generate_hmac(data):
+    
+    # https://cryptography.io/en/latest/hazmat/primitives/mac/hmac/
+    h = hmac.HMAC(HMAC_KEY, hashes.SHA256(), backend=default_backend())
+    h.update(data)
+    return h.finalize()
+
 def db_encrypt_data(plaintext):
 
-    #TODO: REFERENCE OR REYNEL GETS EXPELLED
+    # https://cryptography.io/en/latest/hazmat/primitives/mac/hmac/
+    # https://cryptography.io/en/latest/hazmat/primitives/symmetric-encryption/
+    # https://cryptography.io/en/latest/hazmat/primitives/padding/
+
+    # pad data so that it is multiple of block size
     padder = padding.PKCS7(128).padder()
     padded_plaintext = padder.update(plaintext.encode('utf-8')) + padder.finalize()
 
+    # symmetric encryption
     cipher = Cipher(algorithms.AES(AES_KEY), modes.CBC(b'0000000000000000'), backend=default_backend())
     encryptor = cipher.encryptor()
     ciphertext = encryptor.update(padded_plaintext) + encryptor.finalize()
 
-    # Encode the ciphertext in hexadecimal
-    encrypted_hex = binascii.hexlify(ciphertext).decode('utf-8')
+    hmac_values = generate_hmac(ciphertext)
+
+    # combine hmac sig with ciphertext
+    encrypted_data = ciphertext + hmac_values
+
+    #convert to hex so that it can be stored in db without issue
+    encrypted_hex = binascii.hexlify(encrypted_data).decode('utf-8')
     return encrypted_hex
 
 def db_decrypt_data(encrypted_data): 
-    #TODO: REFERENCE OR REYNEL GETS EXPELLED
+
+    # https://cryptography.io/en/latest/hazmat/primitives/mac/hmac/
+    # https://cryptography.io/en/latest/hazmat/primitives/symmetric-encryption/
+    # https://cryptography.io/en/latest/hazmat/primitives/padding/
+
+    # undo hexlify
     encrypted_data = binascii.unhexlify(encrypted_data.encode('utf-8'))
 
+    # get ciphertext and hmac sig from the data
+    ciphertext = encrypted_data[:-32]
+    hmac_values = encrypted_data[-32:]
+
+    # compare hmac
+    computed_hmac = generate_hmac(ciphertext)
+    if hmac_values != computed_hmac:
+        raise ValueError("HMAC verification failed!")
+
+    # decrypt
     cipher = Cipher(algorithms.AES(AES_KEY), modes.CBC(b'0000000000000000'), backend=default_backend())
     decryptor = cipher.decryptor()
-    decrypted_data = decryptor.update(encrypted_data) + decryptor.finalize()
+    decrypted_data = decryptor.update(ciphertext) + decryptor.finalize()
 
+    #remove padding
     unpadder = padding.PKCS7(128).unpadder()
     decrypted_data = unpadder.update(decrypted_data) + unpadder.finalize()
 
+    #reutnr decrypted data
     return decrypted_data.decode('utf-8')
 
 
@@ -213,34 +243,6 @@ def db_get_file_perms(file_name, file_path):
 
     except sqlite3.Error as e:
         print(f"Database error: {e} get file perms")
-
-
-
-def db_get_directory_id(dir_name, dir_path):
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute(
-            '''
-            SELECT dir_id 
-            FROM directories 
-            WHERE dir_name = ? 
-            AND dir_path = ?
-            ''', 
-            (db_encrypt_data(dir_name), dir_path)
-        )
-        dir_id = cursor.fetchone()
-
-        if dir_id:
-            print("Directory ID found! ", dir_id)
-            return dir_id
-        else:
-            print("No ID found, ", dir_id)
-            return None
-
-    except sqlite3.Error as e:
-        print(f"Database error: {e} get dir id")
-
 
 def db_get_directory_owner(dir_name, dir_path):
 
@@ -327,39 +329,6 @@ def db_get_user_id(username):
     finally:
         conn.close()
 
-def db_get_all_users():
-    userlist = []
-
-    try:
-
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-
-        cursor.execute(
-            '''
-            SELECT * 
-            FROM users
-            '''
-        )
-
-        users = cursor.fetchall()
-
-        for user in users:
-
-            userlist.append({
-                'user_id': user[0],
-                'username': user[1],
-                # 'password_hash': user[2]
-            })
-
-    except sqlite3.Error as e:
-        print(f"Database error: {e} get all users")
-    
-    finally:
-        # Ensure the database connection is closed
-        conn.close()
-
-    return userlist
 
 def db_add_group(group_name):
 
@@ -509,27 +478,6 @@ def db_create_directory(dir_name, owner_name):
     finally:
         conn.close()
 
-def db_get_directory_id(dir_name, parent_dir_id):
-    #TODO: encrypt/decrypt values
-
-    # use directory name and parent directory ID
-    # if parent_dir_id == 0, we are in root directory
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-
-    try:
-        # Execute the query to fetch the dir_id
-        cursor.execute("SELECT dir_id FROM directories WHERE dir_name = ? AND parent_dir_id = ?", (dir_name, parent_dir_id))
-        result = cursor.fetchone()
-
-        if result:
-            return result[0]  # Return the dir_id value
-        else:
-            return None
-
-    except sqlite3.Error as e:
-        print("SQLite error:", e)
-        return None
 
 def change_permissions(name, group_names, fileflag):
     try:

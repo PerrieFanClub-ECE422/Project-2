@@ -353,5 +353,4 @@ def decrypt_directory_names(file_path):
     return decrypted_path
 
 if __name__ == '__main__':
-    dbsetup.init_global_keys()
     main()
